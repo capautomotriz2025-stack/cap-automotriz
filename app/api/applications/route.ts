@@ -211,11 +211,21 @@ export async function POST(request: NextRequest) {
     }
     
     // Enviar confirmación por WhatsApp (opcional)
+    console.log('\n📲 ===== INICIANDO ENVÍO DE WHATSAPP =====');
+    console.log('👤 Candidato:', fullName);
+    console.log('📞 Teléfono proporcionado:', phone);
     try {
-      await sendApplicationConfirmationWhatsApp(fullName, phone, vacancy.title);
+      const whatsappResult = await sendApplicationConfirmationWhatsApp(fullName, phone, vacancy.title);
+      console.log('📲 Resultado del envío de WhatsApp:', whatsappResult);
+      if (whatsappResult.success) {
+        console.log('✅ WhatsApp enviado correctamente');
+      } else {
+        console.log('⚠️  WhatsApp no se pudo enviar:', whatsappResult.error || whatsappResult);
+      }
     } catch (error) {
-      console.error('Error enviando WhatsApp:', error);
+      console.error('❌ Error capturado al enviar WhatsApp:', error);
     }
+    console.log('📲 ===== FIN ENVÍO DE WHATSAPP =====\n');
     
     return NextResponse.json(
       { 
