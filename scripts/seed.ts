@@ -39,8 +39,8 @@ import mongoose from 'mongoose';
 import Vacancy from '../models/Vacancy';
 import Candidate from '../models/Candidate';
 
-// Usar la URI de la variable de entorno (bd_MONGODB_URI o MONGODB_URI) o la local por defecto
-const MONGODB_URI = process.env.bd_MONGODB_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/recruitment';
+// Usar la URI de la variable de entorno (BD_MONGODB_URI o MONGODB_URI) o la local por defecto
+const MONGODB_URI = process.env.BD_MONGODB_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/recruitment';
 
 const vacanciesData = [
   {

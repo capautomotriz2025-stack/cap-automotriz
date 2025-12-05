@@ -1,8 +1,8 @@
 import mongoose from 'mongoose';
 import { setMockDataMode } from './mock-data';
 
-// Usar bd_MONGODB_URI si existe, sino MONGODB_URI, sino local por defecto
-const MONGODB_URI = process.env.bd_MONGODB_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/recruitment';
+// Usar BD_MONGODB_URI si existe, sino MONGODB_URI, sino local por defecto
+const MONGODB_URI = process.env.BD_MONGODB_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/recruitment';
 
 interface MongooseCache {
   conn: typeof mongoose | null;
