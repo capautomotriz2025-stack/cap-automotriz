@@ -127,3 +127,46 @@ export async function sendOfferLetter(
   );
 }
 
+export async function sendEvaluationNotification(
+  candidateName: string,
+  candidateEmail: string,
+  vacancyTitle: string
+) {
+  const html = `
+    <h1>Actualización de tu Proceso</h1>
+    <p>Hola ${candidateName},</p>
+    <p>Te informamos que tu aplicación para el puesto de <strong>${vacancyTitle}</strong> está en etapa de evaluación.</p>
+    <p>Nuestro equipo está revisando tu perfil y experiencia. Te contactaremos con los próximos pasos en breve.</p>
+    <br>
+    <p>Saludos cordiales,<br>Equipo de Recursos Humanos</p>
+  `;
+
+  return await sendEmail(
+    candidateEmail,
+    `Actualización - ${vacancyTitle}`,
+    html
+  );
+}
+
+export async function sendRejectionNotification(
+  candidateName: string,
+  candidateEmail: string,
+  vacancyTitle: string
+) {
+  const html = `
+    <h1>Actualización de tu Proceso</h1>
+    <p>Hola ${candidateName},</p>
+    <p>Gracias por tu interés en el puesto de <strong>${vacancyTitle}</strong>.</p>
+    <p>Después de una cuidadosa revisión, lamentamos informarte que en esta ocasión no podremos avanzar con tu candidatura.</p>
+    <p>Valoramos mucho el tiempo que invertiste en el proceso y te deseamos éxito en tu búsqueda profesional.</p>
+    <br>
+    <p>Saludos cordiales,<br>Equipo de Recursos Humanos</p>
+  `;
+
+  return await sendEmail(
+    candidateEmail,
+    `Actualización - ${vacancyTitle}`,
+    html
+  );
+}
+

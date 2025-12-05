@@ -1,8 +1,46 @@
+// Cargar variables de entorno desde .env.local
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
+
+// Función para cargar .env.local
+function loadEnvFile() {
+  const possiblePaths = [
+    resolve(process.cwd(), '.env.local'),
+    resolve(__dirname, '..', '.env.local'),
+    resolve(__dirname, '../..', '.env.local'),
+  ];
+  
+  for (const envPath of possiblePaths) {
+    try {
+      const envContent = readFileSync(envPath, 'utf-8');
+      envContent.split('\n').forEach(line => {
+        const trimmedLine = line.trim();
+        if (trimmedLine && !trimmedLine.startsWith('#') && trimmedLine.includes('=')) {
+          const [key, ...valueParts] = trimmedLine.split('=');
+          const value = valueParts.join('=').replace(/^["']|["']$/g, ''); // Remover comillas
+          if (key && value) {
+            process.env[key.trim()] = value.trim();
+          }
+        }
+      });
+      console.log('✅ Variables de .env.local cargadas desde:', envPath);
+      return;
+    } catch (error) {
+      // Continuar con el siguiente path
+    }
+  }
+  console.log('⚠️  No se encontró .env.local en:', possiblePaths.join(', '));
+  console.log('📂 Directorio actual:', process.cwd());
+}
+
+loadEnvFile();
+
 import mongoose from 'mongoose';
 import Vacancy from '../models/Vacancy';
 import Candidate from '../models/Candidate';
 
-const MONGODB_URI = 'mongodb://localhost:27017/recruitment';
+// Usar la URI de la variable de entorno (bd_MONGODB_URI o MONGODB_URI) o la local por defecto
+const MONGODB_URI = process.env.bd_MONGODB_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/recruitment';
 
 const vacanciesData = [
   {
@@ -309,10 +347,16 @@ const candidatesData = [
 async function seed() {
   try {
     console.log('🌱 Iniciando seed de la base de datos...\n');
+    console.log('📡 URI de conexión:', MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')); // Ocultar credenciales
+    console.log('🔍 Verificando conexión...\n');
 
     // Conectar a MongoDB
     await mongoose.connect(MONGODB_URI);
-    console.log('✅ Conectado a MongoDB\n');
+    console.log('✅ Conectado a MongoDB');
+    console.log('📊 Base de datos:', mongoose.connection.db?.databaseName || 'No especificada');
+    console.log('🔗 Host:', mongoose.connection.host || 'N/A');
+    console.log('📦 Colecciones existentes:', (await mongoose.connection.db?.listCollections().toArray())?.map(c => c.name).join(', ') || 'Ninguna');
+    console.log('');
 
     // Limpiar colecciones existentes
     console.log('🗑️  Limpiando colecciones existentes...');

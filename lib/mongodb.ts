@@ -1,7 +1,8 @@
 import mongoose from 'mongoose';
 import { setMockDataMode } from './mock-data';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/recruitment';
+// Usar bd_MONGODB_URI si existe, sino MONGODB_URI, sino local por defecto
+const MONGODB_URI = process.env.bd_MONGODB_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/recruitment';
 
 interface MongooseCache {
   conn: typeof mongoose | null;
@@ -46,6 +47,9 @@ async function connectDB() {
         global.mongoDBAvailable = true;
         setMockDataMode(false);
         console.log('✅ MongoDB conectado');
+        console.log('📊 Base de datos:', mongoose.connection.db?.databaseName || 'No especificada');
+        console.log('🔗 Host:', mongoose.connection.host || 'N/A');
+        console.log('📡 URI (oculta):', MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
         return mongoose;
       })
       .catch((error) => {
