@@ -24,6 +24,14 @@ export default function ApplyPage({ params }: { params: { vacancyId: string } })
     phone: '',
     cv: null as File | null
   });
+  const countryCodes = [
+    { code: '+52', name: 'México' },
+    { code: '+504', name: 'Honduras' },
+    { code: '+1', name: 'EE.UU./Miami' },
+    { code: '+54', name: 'Argentina' },
+    { code: '+507', name: 'Panamá' },
+  ];
+  const [selectedCode, setSelectedCode] = useState(countryCodes[0].code);
   
   useEffect(() => {
     fetchVacancy();
@@ -60,7 +68,8 @@ export default function ApplyPage({ params }: { params: { vacancyId: string } })
       formDataToSend.append('vacancyId', params.vacancyId);
       formDataToSend.append('fullName', formData.fullName);
       formDataToSend.append('email', formData.email);
-      formDataToSend.append('phone', formData.phone);
+      // Concatenar el código de país seleccionado con el número
+      formDataToSend.append('phone', `${selectedCode}${formData.phone}`);
       formDataToSend.append('cv', formData.cv);
       
       const response = await axios.post('/api/applications', formDataToSend, {
@@ -236,15 +245,27 @@ export default function ApplyPage({ params }: { params: { vacancyId: string } })
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Teléfono (con código de país) *</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      required
-                      value={formData.phone}
-                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                      placeholder="+52 55 1234 5678"
-                    />
+                    <Label htmlFor="phone">Teléfono *</Label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <select
+                        value={selectedCode}
+                        onChange={e => setSelectedCode(e.target.value)}
+                        style={{ minWidth: 90 }}
+                        required
+                      >
+                        {countryCodes.map(c => (
+                          <option key={c.code} value={c.code}>{c.name} ({c.code})</option>
+                        ))}
+                      </select>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        required
+                        value={formData.phone}
+                        onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                        placeholder="95697301"
+                      />
+                    </div>
                   </div>
                   
                   <div className="space-y-2">
