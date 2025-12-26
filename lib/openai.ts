@@ -97,7 +97,14 @@ export async function analyzeCandidateCV(
     });
 
     const content = completion.choices[0].message.content || '{}';
-    return JSON.parse(content);
+
+    // Extraer el primer bloque JSON válido de la respuesta
+    function extractJSON(text: string): string {
+      const match = text.match(/\{[\s\S]*\}/);
+      return match ? match[0] : '{}';
+    }
+
+    return JSON.parse(extractJSON(content));
   } catch (error) {
     console.error('Error analizando candidato:', error);
     return {

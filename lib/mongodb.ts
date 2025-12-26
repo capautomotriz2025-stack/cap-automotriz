@@ -9,24 +9,34 @@ interface MongooseCache {
   promise: Promise<typeof mongoose> | null;
 }
 
+
+// Evitar redeclaración de variables globales en entornos de recarga (Next.js)
 declare global {
+  // @ts-ignore
   var mongoose: MongooseCache | undefined;
+  // @ts-ignore
   var mongoDBAvailable: boolean | undefined;
 }
 
-let cached: MongooseCache = global.mongoose || { conn: null, promise: null };
 
-if (!global.mongoose) {
-  global.mongoose = cached;
-}
+// Declarar variables globales de forma segura para evitar errores de recarga en Next.js
+type GlobalWithMongoose = typeof globalThis & {
+  mongoose?: MongooseCache;
+  mongoDBAvailable?: boolean;
+};
+const g = global as GlobalWithMongoose;
 
-if (global.mongoDBAvailable === undefined) {
-  global.mongoDBAvailable = true;
+if (!g.mongoose) {
+  g.mongoose = { conn: null, promise: null };
 }
+if (g.mongoDBAvailable === undefined) {
+  g.mongoDBAvailable = true;
+}
+let cached: MongooseCache = g.mongoose;
 
 async function connectDB() {
   // Si ya sabemos que MongoDB no está disponible, no intentar conectar
-  if (global.mongoDBAvailable === false) {
+  if ((global as any).mongoDBAvailable === false) {
     setMockDataMode(true);
     console.log('⚠️  Usando datos mock (MongoDB no disponible)');
     return null;
@@ -44,7 +54,7 @@ async function connectDB() {
 
     cached.promise = mongoose.connect(MONGODB_URI, opts)
       .then((mongoose) => {
-        global.mongoDBAvailable = true;
+        (global as any).mongoDBAvailable = true;
         setMockDataMode(false);
         console.log('✅ MongoDB conectado');
         console.log('📊 Base de datos:', mongoose.connection.db?.databaseName || 'No especificada');
@@ -53,7 +63,7 @@ async function connectDB() {
         return mongoose;
       })
       .catch((error) => {
-        global.mongoDBAvailable = false;
+        (global as any).mongoDBAvailable = false;
         setMockDataMode(true);
         console.log('⚠️  MongoDB no disponible, usando datos mock:', error.message);
         cached.promise = null;
@@ -65,7 +75,7 @@ async function connectDB() {
     cached.conn = await cached.promise;
   } catch (e) {
     cached.promise = null;
-    global.mongoDBAvailable = false;
+    (global as any).mongoDBAvailable = false;
     setMockDataMode(true);
     console.log('⚠️  Error conectando a MongoDB, usando datos mock');
   }
@@ -74,7 +84,7 @@ async function connectDB() {
 }
 
 export function isMongoDBAvailable() {
-  return global.mongoDBAvailable !== false;
+  return (global as any).mongoDBAvailable !== false;
 }
 
 export default connectDB;
