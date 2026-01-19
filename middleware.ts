@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export default function middleware() {
 	return NextResponse.next();
 }
-// ...original code comentado abajo...
+// ...original code commented below...
 // Middleware desactivado temporalmente para debug de acceso
 // import { withAuth } from 'next-auth/middleware';
 // import { NextResponse } from 'next/server';
