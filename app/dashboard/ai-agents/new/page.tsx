@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import Link from 'next/link';
@@ -10,7 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Bot, Sparkles, Save, Info, Plus, X } from 'lucide-react';
+import { ArrowLeft, Bot, Sparkles, Save, Info, Plus, X, Eye, Edit2, Check } from 'lucide-react';
+import { generateSystemPrompt } from '@/lib/prompt-generator';
 
 export default function NewAIAgentPage() {
   const router = useRouter();
@@ -20,7 +21,7 @@ export default function NewAIAgentPage() {
   
   const [formData, setFormData] = useState({
     name: '',
-    category: 'custom',
+    category: 'otro',
     description: '',
     criteria: {
       experience: {
@@ -36,7 +37,7 @@ export default function NewAIAgentPage() {
       },
       education: {
         weight: 15,
-        minLevel: 'none' as 'none' | 'high-school' | 'associate' | 'bachelor' | 'master' | 'doctorate',
+        minLevel: 'none' as 'none' | 'high-school' | 'bachelor' | 'master' | 'phd',
         required: false,
       },
       softSkills: {
@@ -52,21 +53,6 @@ export default function NewAIAgentPage() {
       potential: 65,
       review: 50,
     },
-    systemPrompt: `Eres un Agente de Reclutamiento Especializado. Analiza el CV del candidato y proporciona:
-1. Un puntaje del 1-100 basado en qué tan bien coincide con los requisitos
-2. Clasificación: "ideal" (80-100), "potential" (50-79), o "no-fit" (0-49)
-3. Resumen breve
-4. Fortalezas (array)
-5. Preocupaciones (array)
-
-Responde SOLO con un JSON válido en este formato:
-{
-  "score": 85,
-  "classification": "ideal",
-  "summary": "El candidato tiene...",
-  "strengths": ["Fortaleza 1", "Fortaleza 2"],
-  "concerns": ["Preocupación 1"]
-}`,
     active: true,
   });
 
@@ -74,9 +60,44 @@ Responde SOLO con un JSON válido en este formato:
   const [newDesiredSkill, setNewDesiredSkill] = useState('');
   const [newCertification, setNewCertification] = useState('');
   const [newSoftSkill, setNewSoftSkill] = useState('');
+  const [advancedMode, setAdvancedMode] = useState(false);
+  const [manualPrompt, setManualPrompt] = useState('');
+
+  // Generar prompt automáticamente cuando cambien los datos del formulario
+  const generatedPrompt = useMemo(() => {
+    if (!formData.name.trim()) {
+      return '';
+    }
+    try {
+      return generateSystemPrompt({
+        name: formData.name,
+        category: formData.category,
+        description: formData.description,
+        criteria: formData.criteria,
+        thresholds: formData.thresholds,
+      });
+    } catch (error) {
+      console.error('Error generando prompt:', error);
+      return '';
+    }
+  }, [formData]);
+
+  // Sincronizar manualPrompt con generatedPrompt cuando se desactiva advancedMode
+  useEffect(() => {
+    if (!advancedMode && generatedPrompt) {
+      setManualPrompt(generatedPrompt);
+    }
+  }, [advancedMode, generatedPrompt]);
+
+  // Usar prompt manual si está en modo avanzado, sino usar el generado
+  const finalPrompt = advancedMode ? manualPrompt : generatedPrompt;
 
   useEffect(() => {
     fetchTemplates();
+    // Inicializar manualPrompt con el prompt generado inicial
+    if (generatedPrompt) {
+      setManualPrompt(generatedPrompt);
+    }
   }, []);
 
   const fetchTemplates = async () => {
@@ -93,7 +114,7 @@ Responde SOLO con un JSON válido en este formato:
   const loadTemplate = (templateId: string) => {
     const template = templates.find(t => (t._id || t.name) === templateId);
     if (template) {
-      setFormData({
+      const newFormData = {
         name: `${template.name} (Personalizado)`,
         category: template.category,
         description: template.description || '',
@@ -101,8 +122,14 @@ Responde SOLO con un JSON válido en este formato:
         thresholds: { ...template.thresholds },
         systemPrompt: template.systemPrompt,
         active: true,
-      });
+      };
+      setFormData(newFormData);
       setSelectedTemplate(templateId);
+      // Si el template tiene un prompt personalizado, activar modo avanzado
+      if (template.systemPrompt && template.systemPrompt !== generateSystemPrompt(newFormData)) {
+        setAdvancedMode(true);
+        setManualPrompt(template.systemPrompt);
+      }
     }
   };
 
@@ -175,6 +202,7 @@ Responde SOLO con un JSON válido en este formato:
     try {
       const response = await axios.post('/api/ai-agents', {
         ...formData,
+        systemPrompt: finalPrompt, // Usar el prompt final (generado o manual)
         isTemplate: false,
       });
 
@@ -227,11 +255,12 @@ Responde SOLO con un JSON válido en este formato:
                 className="h-auto py-4 flex flex-col items-start"
                 onClick={() => {
                   setSelectedTemplate('');
+                  setAdvancedMode(false);
                   // Reset to default
                   setFormData({
                     ...formData,
                     name: '',
-                    category: 'custom',
+                    category: 'otro',
                     description: '',
                   });
                 }}
@@ -291,7 +320,7 @@ Responde SOLO con un JSON válido en este formato:
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 >
-                  <option value="custom">Personalizado</option>
+                  <option value="otro">Otro</option>
                   <option value="desarrollo">Desarrollo</option>
                   <option value="gerencia">Gerencia</option>
                   <option value="diseño">Diseño</option>
@@ -299,7 +328,7 @@ Responde SOLO con un JSON válido en este formato:
                   <option value="finanzas">Finanzas</option>
                   <option value="rrhh">Recursos Humanos</option>
                   <option value="operaciones">Operaciones</option>
-                  <option value="data">Datos</option>
+                  <option value="soporte">Soporte</option>
                 </select>
               </div>
             </div>
@@ -515,10 +544,9 @@ Responde SOLO con un JSON válido en este formato:
                   >
                     <option value="none">Sin requisito</option>
                     <option value="high-school">Preparatoria</option>
-                    <option value="associate">Técnico/Associate</option>
                     <option value="bachelor">Licenciatura</option>
                     <option value="master">Maestría</option>
-                    <option value="doctorate">Doctorado</option>
+                    <option value="phd">Doctorado</option>
                   </select>
                 </div>
                 <div className="space-y-2">
@@ -672,24 +700,108 @@ Responde SOLO con un JSON válido en este formato:
           </CardContent>
         </Card>
 
-        {/* System Prompt */}
-        <Card>
+        {/* System Prompt - Generado Automáticamente */}
+        <Card className="border-2 border-blue-100 bg-gradient-to-br from-blue-50/50 to-white">
           <CardHeader>
-            <CardTitle>System Prompt (Avanzado)</CardTitle>
-            <CardDescription>
-              Personaliza las instrucciones que la IA usará para evaluar candidatos
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-blue-600" />
+                  <CardTitle>System Prompt Generado</CardTitle>
+                </div>
+                <CardDescription>
+                  El prompt se genera automáticamente basándose en los criterios configurados arriba
+                </CardDescription>
+              </div>
+              <Button
+                type="button"
+                variant={advancedMode ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setAdvancedMode(!advancedMode);
+                  if (!advancedMode) {
+                    setManualPrompt(generatedPrompt);
+                  }
+                }}
+              >
+                {advancedMode ? (
+                  <>
+                    <Check className="h-4 w-4 mr-2" />
+                    Modo Avanzado
+                  </>
+                ) : (
+                  <>
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Editar Manualmente
+                  </>
+                )}
+              </Button>
+            </div>
           </CardHeader>
-          <CardContent>
-            <Textarea
-              rows={12}
-              value={formData.systemPrompt}
-              onChange={(e) => setFormData({ ...formData, systemPrompt: e.target.value })}
-              className="font-mono text-xs"
-            />
-            <p className="text-xs text-muted-foreground mt-2">
-              Asegúrate de mantener la estructura JSON en la respuesta para que funcione correctamente.
-            </p>
+          <CardContent className="space-y-4">
+            {!advancedMode ? (
+              <>
+                <div className="relative">
+                  <Textarea
+                    rows={15}
+                    value={generatedPrompt}
+                    readOnly
+                    className="font-mono text-xs bg-gray-50 border-gray-200"
+                  />
+                  <div className="absolute top-2 right-2">
+                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                      <Eye className="h-3 w-3 mr-1" />
+                      Vista Previa
+                    </Badge>
+                  </div>
+                </div>
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-900 flex items-start gap-2">
+                    <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <span>
+                      Este prompt se genera automáticamente y se actualiza en tiempo real cuando modificas los criterios arriba.
+                      Puedes activar el <strong>Modo Avanzado</strong> para editarlo manualmente si necesitas personalizaciones específicas.
+                    </span>
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label>Editar Prompt Manualmente</Label>
+                  <Textarea
+                    rows={15}
+                    value={manualPrompt}
+                    onChange={(e) => setManualPrompt(e.target.value)}
+                    className="font-mono text-xs"
+                    placeholder="Escribe o edita el prompt manualmente..."
+                  />
+                </div>
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-900 flex items-start gap-2">
+                    <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <span>
+                      <strong>Modo Avanzado activado:</strong> Estás editando el prompt manualmente.
+                      Asegúrate de mantener el formato JSON en la respuesta para que funcione correctamente.
+                      Puedes desactivar este modo para volver a la generación automática.
+                    </span>
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setManualPrompt(generatedPrompt);
+                    setAdvancedMode(false);
+                  }}
+                  className="w-full"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Restaurar Prompt Generado
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
 
