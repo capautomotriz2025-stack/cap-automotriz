@@ -115,12 +115,6 @@ export default function DashboardPage() {
             Bienvenido a tu panel de reclutamiento inteligente
           </p>
         </div>
-        <Link href="/dashboard/vacancies/new">
-          <Button size="lg" className="bg-racing-gradient hover:scale-105 transition-transform shadow-racing font-black">
-            <Plus className="mr-2 h-5 w-5" />
-            Nueva Vacante
-          </Button>
-        </Link>
       </div>
 
       {/* Stats Grid */}

@@ -16,6 +16,24 @@ export interface ICandidate extends Document {
   // Estado del proceso
   status: 'applied' | 'screening' | 'interview' | 'evaluation' | 'offer' | 'hired' | 'rejected';
   
+  // Control de duplicados
+  previousApplications?: Array<{
+    vacancyId: string;
+    appliedAt: Date;
+    status: string;
+    aiScore?: number;
+  }>;
+  isDuplicate?: boolean;
+  duplicateReason?: string;
+  
+  // CV Genérico
+  genericCV?: {
+    summary: Array<string>; // 5 puntos de resumen
+    technicalTestScore?: number; // Solo admin puede editar
+    generatedAt: Date;
+    pdfUrl?: string;
+  };
+  
   // Evaluación detallada (para finalistas)
   evaluation?: {
     interviewNotes?: string;
@@ -65,6 +83,22 @@ const CandidateSchema = new Schema<ICandidate>({
     type: String, 
     enum: ['applied', 'screening', 'interview', 'evaluation', 'offer', 'hired', 'rejected'],
     default: 'applied'
+  },
+  
+  previousApplications: [{
+    vacancyId: { type: String, required: true },
+    appliedAt: { type: Date, required: true },
+    status: { type: String, required: true },
+    aiScore: { type: Number }
+  }],
+  isDuplicate: { type: Boolean, default: false },
+  duplicateReason: { type: String },
+  
+  genericCV: {
+    summary: [{ type: String }],
+    technicalTestScore: { type: Number, min: 0, max: 100 },
+    generatedAt: { type: Date },
+    pdfUrl: { type: String }
   },
   
   evaluation: {

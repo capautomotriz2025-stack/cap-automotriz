@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { getClassificationColor, getScoreColor, getStatusColor } from '@/lib/utils';
-import { Search, Mail, Phone, FileText, Trash2, AlertTriangle, X, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { Search, Mail, Phone, FileText, Trash2, AlertTriangle, X, ChevronLeft, ChevronRight, Filter, Download, Eye, Loader2, MessageSquare } from 'lucide-react';
 
 export default function CandidatesPage() {
   const [candidates, setcandidates] = useState<any[]>([]);
@@ -17,6 +17,8 @@ export default function CandidatesPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [candidateToDelete, setCandidateToDelete] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [generatingCV, setGeneratingCV] = useState<string | null>(null);
+  const [generatingInterview, setGeneratingInterview] = useState<string | null>(null);
   
   // Paginación
   const [currentPage, setCurrentPage] = useState(1);
@@ -262,18 +264,150 @@ export default function CandidatesPage() {
                       </p>
                     )}
 
-                    <div className="flex gap-2 pt-2">
+                    <div className="flex gap-2 pt-2 flex-wrap">
                       <a
                         href={candidate.cvUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-1"
                       >
-                        <Button variant="outline" size="sm" className="w-full border-2 border-cap-gray text-cap-gray-lightest hover:border-cap-red hover:text-cap-red font-bold transition-all">
-                          <FileText className="w-4 h-4 mr-2" />
-                          Ver CV
+                        <Button variant="outline" size="sm" className="border-2 border-cap-gray text-cap-gray-lightest hover:border-cap-red hover:text-cap-red font-bold transition-all">
+                          <Eye className="w-4 h-4 mr-2" />
+                          Ver Original
                         </Button>
                       </a>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          if (!candidate.genericCV || !candidate.genericCV.pdfUrl) {
+                            setGeneratingCV(candidate._id);
+                            try {
+                              const response = await axios.post(`/api/candidates/${candidate._id}/generate-cv`);
+                              if (response.data.success) {
+                                // Actualizar el candidato en la lista
+                                const updatedCandidates = candidates.map(c => 
+                                  c._id === candidate._id 
+                                    ? { ...c, genericCV: response.data.data }
+                                    : c
+                                );
+                                setcandidates(updatedCandidates);
+                                // Abrir el CV genérico
+                                if (response.data.data.pdfUrl) {
+                                  window.open(response.data.data.pdfUrl, '_blank');
+                                }
+                              }
+                            } catch (error) {
+                              console.error('Error generando CV genérico:', error);
+                              alert('Error al generar CV genérico');
+                            } finally {
+                              setGeneratingCV(null);
+                            }
+                          } else {
+                            // Si ya existe, solo abrirlo
+                            window.open(candidate.genericCV.pdfUrl, '_blank');
+                          }
+                        }}
+                        disabled={generatingCV === candidate._id}
+                        className="border-2 border-cap-gray text-cap-gray-lightest hover:border-cap-red hover:text-cap-red font-bold transition-all disabled:opacity-50"
+                      >
+                        {generatingCV === candidate._id ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Generando...
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="w-4 h-4 mr-2" />
+                            Ver Genérico
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          // Si no existe el PDF, generarlo primero
+                          if (!candidate.genericCV?.pdfUrl) {
+                            setGeneratingCV(candidate._id);
+                            try {
+                              const response = await axios.post(`/api/candidates/${candidate._id}/generate-cv`);
+                              if (response.data.success && response.data.data.pdfUrl) {
+                                const link = document.createElement('a');
+                                link.href = response.data.data.pdfUrl;
+                                link.download = `CV-Generico-${candidate.fullName}.pdf`;
+                                link.click();
+                                // Actualizar el candidato
+                                const updatedCandidates = candidates.map(c => 
+                                  c._id === candidate._id 
+                                    ? { ...c, genericCV: response.data.data }
+                                    : c
+                                );
+                                setcandidates(updatedCandidates);
+                              }
+                            } catch (error) {
+                              console.error('Error generando CV genérico:', error);
+                              alert('Error al generar CV genérico');
+                            } finally {
+                              setGeneratingCV(null);
+                            }
+                          } else {
+                            // Si ya existe, descargarlo directamente
+                            const link = document.createElement('a');
+                            link.href = candidate.genericCV.pdfUrl;
+                            link.download = `CV-Generico-${candidate.fullName}.pdf`;
+                            link.click();
+                          }
+                        }}
+                        disabled={generatingCV === candidate._id}
+                        className="border-2 border-cap-gray text-cap-gray-lightest hover:border-cap-red hover:text-cap-red font-bold transition-all disabled:opacity-50"
+                      >
+                        {generatingCV === candidate._id ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Generando...
+                          </>
+                        ) : (
+                          <>
+                            <Download className="w-4 h-4 mr-2" />
+                            Descargar
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          setGeneratingInterview(candidate._id);
+                          try {
+                            const response = await axios.post(`/api/candidates/${candidate._id}/generate-interview`);
+                            if (response.data.success && response.data.data.pdfUrl) {
+                              window.open(response.data.data.pdfUrl, '_blank');
+                            } else {
+                              alert('Error al generar la entrevista');
+                            }
+                          } catch (error: any) {
+                            console.error('Error generando entrevista:', error);
+                            alert(error.response?.data?.error || 'Error al generar entrevista');
+                          } finally {
+                            setGeneratingInterview(null);
+                          }
+                        }}
+                        disabled={generatingInterview === candidate._id}
+                        className="border-2 border-cap-gray text-cap-gray-lightest hover:border-cap-red hover:text-cap-red font-bold transition-all disabled:opacity-50"
+                      >
+                        {generatingInterview === candidate._id ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Generando...
+                          </>
+                        ) : (
+                          <>
+                            <MessageSquare className="w-4 h-4 mr-2" />
+                            Generar Entrevista
+                          </>
+                        )}
+                      </Button>
                       <Button 
                         variant="outline" 
                         size="sm"

@@ -6,8 +6,9 @@ import axios from 'axios';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus, MapPin, DollarSign, Edit, Trash2, Eye, AlertTriangle, X } from 'lucide-react';
+import { Plus, MapPin, DollarSign, Edit, Trash2, Eye, AlertTriangle, X, Search } from 'lucide-react';
 import { formatCurrency, getStatusColor } from '@/lib/utils';
 
 export default function VacanciesPage() {
@@ -16,6 +17,7 @@ export default function VacanciesPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [vacancyToDelete, setVacancyToDelete] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchVacancies();
@@ -56,6 +58,19 @@ export default function VacanciesPage() {
     }
   };
 
+  // Filtrar vacantes por búsqueda
+  const filteredVacancies = vacancies.filter(vacancy => {
+    if (!searchTerm) return true;
+    const search = searchTerm.toLowerCase();
+    return (
+      vacancy.title?.toLowerCase().includes(search) ||
+      vacancy.department?.toLowerCase().includes(search) ||
+      vacancy.costCenter?.toLowerCase().includes(search) ||
+      vacancy.requiredProfession?.toLowerCase().includes(search) ||
+      vacancy.applicantName?.toLowerCase().includes(search)
+    );
+  });
+
   if (loading) {
     return <div className="animate-pulse">Cargando vacantes...</div>;
   }
@@ -73,97 +88,147 @@ export default function VacanciesPage() {
         <Link href="/dashboard/vacancies/new">
           <Button className="bg-racing-gradient hover:scale-105 transition-transform shadow-racing font-bold">
             <Plus className="mr-2 h-4 w-4" />
-            Nueva Vacante
+            Crear Vacante
           </Button>
         </Link>
       </div>
 
-      {/* Vacancies List */}
-      {vacancies.length === 0 ? (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <p className="text-gray-500 mb-4">No hay vacantes creadas</p>
-            <Link href="/dashboard/vacancies/new">
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Crear Primera Vacante
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {vacancies.map((vacancy) => (
-            <Card key={vacancy._id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between mb-2">
-                  <CardTitle className="text-lg line-clamp-1">
-                    {vacancy.title}
-                  </CardTitle>
-                  <Badge className={getStatusColor(vacancy.status)}>
-                    {vacancy.status === 'draft' && 'Borrador'}
-                    {vacancy.status === 'published' && 'Publicada'}
-                    {vacancy.status === 'closed' && 'Cerrada'}
-                  </Badge>
-                </div>
-                <CardDescription className="line-clamp-2">
-                  {vacancy.department}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <MapPin className="w-4 h-4 mr-2" />
-                    {vacancy.location}
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <DollarSign className="w-4 h-4 mr-2" />
-                    {formatCurrency(vacancy.salary.min)} - {formatCurrency(vacancy.salary.max)}
-                  </div>
-                  
-                  {vacancy.requiredSkills && vacancy.requiredSkills.length > 0 && (
-                    <div className="flex flex-wrap gap-1 pt-2">
-                      {vacancy.requiredSkills.slice(0, 3).map((skill: string, i: number) => (
-                        <Badge key={i} variant="secondary" className="text-xs">
-                          {skill}
+      {/* Tabla de Solicitudes */}
+      <Card className="border-2 border-cap-gray bg-cap-gray-dark/80 backdrop-blur-sm">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="text-2xl font-black text-white">Solicitudes de Recursos Humanos</CardTitle>
+              <CardDescription className="text-cap-gray-lightest font-semibold mt-1">
+                Lista de todas las solicitudes de vacantes
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-cap-gray" />
+                <Input
+                  type="text"
+                  placeholder="Buscar..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-64 border-2 border-cap-gray bg-cap-black text-white placeholder:text-cap-gray"
+                />
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-cap-gray bg-cap-black">
+                  <th className="px-4 py-3 text-left text-sm font-black text-white">
+                    <input type="checkbox" className="rounded" />
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-black text-white">Nombre de Puesto</th>
+                  <th className="px-4 py-3 text-left text-sm font-black text-white">Nuevo Puesto</th>
+                  <th className="px-4 py-3 text-left text-sm font-black text-white">Departamento</th>
+                  <th className="px-4 py-3 text-left text-sm font-black text-white">Centro de Costos</th>
+                  <th className="px-4 py-3 text-left text-sm font-black text-white">Profesión</th>
+                  <th className="px-4 py-3 text-left text-sm font-black text-white">Fecha de Solicitud</th>
+                  <th className="px-4 py-3 text-left text-sm font-black text-white">Escala de Puesto</th>
+                  <th className="px-4 py-3 text-left text-sm font-black text-white">SLA</th>
+                  <th className="px-4 py-3 text-left text-sm font-black text-white">Nivel de Evaluación</th>
+                  <th className="px-4 py-3 text-left text-sm font-black text-white">Descriptor de Puesto</th>
+                  <th className="px-4 py-3 text-left text-sm font-black text-white">Proceso Aprobado</th>
+                  <th className="px-4 py-3 text-left text-sm font-black text-white">Comentarios</th>
+                  <th className="px-4 py-3 text-left text-sm font-black text-white">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredVacancies.length === 0 ? (
+                  <tr>
+                    <td colSpan={14} className="px-4 py-20 text-center text-cap-gray-lightest font-semibold">
+                      {searchTerm ? 'No se encontraron solicitudes con ese criterio' : 'No hay solicitudes registradas'}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredVacancies.map((vacancy) => (
+                    <tr key={vacancy._id} className="border-b border-cap-gray hover:bg-cap-gray-dark transition-colors">
+                      <td className="px-4 py-3">
+                        <input type="checkbox" className="rounded" />
+                      </td>
+                      <td className="px-4 py-3 text-sm text-white font-bold">{vacancy.title || 'N/A'}</td>
+                      <td className="px-4 py-3 text-sm text-cap-gray-lightest font-semibold">
+                        {vacancy.isNewPosition ? 'Sí' : 'No'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-cap-gray-lightest font-semibold">{vacancy.department || 'N/A'}</td>
+                      <td className="px-4 py-3 text-sm text-cap-gray-lightest font-semibold">{vacancy.costCenter || 'N/A'}</td>
+                      <td className="px-4 py-3 text-sm text-cap-gray-lightest font-semibold">{vacancy.requiredProfession || 'N/A'}</td>
+                      <td className="px-4 py-3 text-sm text-cap-gray-lightest font-semibold">
+                        {vacancy.createdAt ? new Date(vacancy.createdAt).toLocaleDateString('es-MX') : 'N/A'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-cap-gray-lightest font-semibold">
+                        {vacancy.positionScale === 'escala-uno-gerentes' ? 'Escala Uno - Gerentes' :
+                         vacancy.positionScale === 'escala-dos-jefes-coordinadores' ? 'Escala Dos - Jefes y Coordinadores' :
+                         vacancy.positionScale === 'escala-tres-especialistas' ? 'Escala Tres - Especialistas' :
+                         vacancy.positionScale === 'escala-cuatro-oficiales-auxiliares' ? 'Escala Cuatro - Oficiales y Auxiliares' :
+                         vacancy.positionScale || 'N/A'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-cap-gray-lightest font-semibold">
+                        <Badge variant="outline" className="border-cap-gray text-cap-gray-lightest font-bold">
+                          {vacancy.status === 'published' ? 'Activo' : 'Pendiente'}
                         </Badge>
-                      ))}
-                      {vacancy.requiredSkills.length > 3 && (
-                        <Badge variant="secondary" className="text-xs">
-                          +{vacancy.requiredSkills.length - 3}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-cap-gray-lightest font-semibold capitalize">{vacancy.evaluationLevel || 'N/A'}</td>
+                      <td className="px-4 py-3 text-sm">
+                        {vacancy.jobDescriptorFile ? (
+                          <a
+                            href={vacancy.jobDescriptorFile}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-cap-red hover:text-cap-red-dark font-bold hover:underline"
+                          >
+                            Ver Archivo
+                          </a>
+                        ) : (
+                          <span className="text-cap-gray font-semibold">Sin archivo</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <Badge className={`${vacancy.status === 'published' ? 'bg-green-500' : vacancy.status === 'draft' ? 'bg-yellow-500' : 'bg-gray-500'} text-white font-bold`}>
+                          {vacancy.status === 'published' ? 'Aprobado' : vacancy.status === 'draft' ? 'Pendiente' : 'Cerrado'}
                         </Badge>
-                      )}
-                    </div>
-                  )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-cap-gray-lightest font-semibold max-w-xs truncate">
+                        {vacancy.mainFunctions || vacancy.description || 'Sin comentarios'}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Link href={`/dashboard/vacancies/${vacancy._id}`}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-2 border-cap-gray text-cap-gray-lightest hover:border-cap-red hover:text-cap-red font-bold transition-all"
+                            >
+                              <Edit className="w-4 h-4 mr-1" />
+                              Editar
+                            </Button>
+                          </Link>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openDeleteModal(vacancy)}
+                            className="border-2 border-cap-red text-cap-red hover:bg-cap-red hover:text-white font-bold transition-all"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
-                  <div className="flex gap-2 pt-4 border-t">
-                    <Link href={`/apply/${vacancy._id}`} className="flex-1">
-                      <Button variant="outline" size="sm" className="w-full">
-                        <Eye className="w-4 h-4 mr-1" />
-                        Ver
-                      </Button>
-                    </Link>
-                    <Link href={`/dashboard/vacancies/${vacancy._id}`} className="flex-1">
-                      <Button variant="outline" size="sm" className="w-full">
-                        <Edit className="w-4 h-4 mr-1" />
-                        Editar
-                      </Button>
-                    </Link>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openDeleteModal(vacancy)}
-                      className="border-2 border-cap-red text-cap-red hover:bg-cap-red hover:text-white font-bold transition-all"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
 
       {/* Modal de Confirmación de Eliminación */}
       <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>

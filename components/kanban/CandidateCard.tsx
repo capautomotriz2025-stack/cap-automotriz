@@ -1,12 +1,15 @@
 'use client';
 
+import { useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { ICandidate } from '@/models/Candidate';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { getClassificationColor, getScoreColor } from '@/lib/utils';
-import { Mail, Phone, FileText } from 'lucide-react';
+import { Mail, Phone, FileText, MessageSquare, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import axios from 'axios';
 
 interface CandidateCardProps {
   candidate: ICandidate;
@@ -14,6 +17,7 @@ interface CandidateCardProps {
 }
 
 export default function CandidateCard({ candidate, isDragging = false }: CandidateCardProps) {
+  const [generatingInterview, setGeneratingInterview] = useState(false);
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: candidate._id.toString(),
   });
@@ -21,6 +25,22 @@ export default function CandidateCard({ candidate, isDragging = false }: Candida
   const style = transform ? {
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
   } : undefined;
+  
+  const handleGenerateInterview = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setGeneratingInterview(true);
+    try {
+      const response = await axios.post(`/api/candidates/${candidate._id}/generate-interview`);
+      if (response.data.success && response.data.data.pdfUrl) {
+        window.open(response.data.data.pdfUrl, '_blank');
+      }
+    } catch (error) {
+      console.error('Error generando entrevista:', error);
+      alert('Error al generar entrevista');
+    } finally {
+      setGeneratingInterview(false);
+    }
+  };
   
   const classificationColors = {
     'ideal': 'bg-green-100 text-green-800 border-green-300',
@@ -82,8 +102,8 @@ export default function CandidateCard({ candidate, isDragging = false }: Candida
               </p>
             )}
             
-            {/* CV Link */}
-            <div className="pt-2 border-t">
+            {/* Actions */}
+            <div className="pt-2 border-t space-y-2">
               <a
                 href={candidate.cvUrl}
                 target="_blank"
@@ -94,6 +114,25 @@ export default function CandidateCard({ candidate, isDragging = false }: Candida
                 <FileText className="w-3 h-3" />
                 Ver CV
               </a>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateInterview}
+                disabled={generatingInterview}
+                className="w-full text-xs h-7"
+              >
+                {generatingInterview ? (
+                  <>
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                    Generando...
+                  </>
+                ) : (
+                  <>
+                    <MessageSquare className="w-3 h-3 mr-1" />
+                    Generar Entrevista
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </CardContent>

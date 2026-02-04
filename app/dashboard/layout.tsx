@@ -26,7 +26,7 @@ import { useState } from 'react';
 const baseNavigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Gauge, badge: null, role: null },
   { name: 'Vacantes', href: '/dashboard/vacancies', icon: Briefcase, badge: null, role: null },
-  { name: 'Candidatos', href: '/dashboard/candidates', icon: Users, badge: null, role: null },
+  { name: 'Evaluados', href: '/dashboard/candidates', icon: Users, badge: null, role: null },
   { name: 'Kanban', href: '/dashboard/kanban', icon: Kanban, badge: null, role: null },
   { name: 'Agentes IA', href: '/dashboard/ai-agents', icon: Bot, badge: 'IA', role: null },
   { name: 'Usuarios', href: '/dashboard/users', icon: UserCog, badge: 'Admin', role: 'superadmin' },
@@ -157,12 +157,6 @@ export default function DashboardLayout({
             <p className="px-3 text-xs font-bold text-cap-gray uppercase tracking-wider mb-2">
               Acciones Rápidas
             </p>
-            <Link href="/dashboard/vacancies/new" onClick={() => setSidebarOpen(false)}>
-              <Button className="w-full bg-racing-gradient hover:scale-105 transition-transform text-white shadow-racing font-bold">
-                <Briefcase className="mr-2 h-4 w-4" />
-                Nueva Vacante
-              </Button>
-            </Link>
             <Button 
               variant="outline" 
               className="w-full border-2 border-cap-red text-cap-red hover:bg-cap-red hover:text-white font-bold transition-all" 

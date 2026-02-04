@@ -51,6 +51,57 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    // CONTROL DE DUPLICADOS: Verificar si el candidato ya aplicó
+    let existingCandidates: any[] = [];
+    if (usingMockData() || !isMongoDBAvailable()) {
+      existingCandidates = mockCandidates.filter(c => c.email === email);
+    } else {
+      existingCandidates = await Candidate.find({ email: email.toLowerCase() });
+    }
+    
+    // Verificar si ya aplicó a esta misma vacante
+    const duplicateApplication = existingCandidates.find(c => {
+      const candidateVacancyId = c.vacancyId?._id?.toString() || c.vacancyId?.toString() || c.vacancyId;
+      return candidateVacancyId === vacancyId;
+    });
+    
+    if (duplicateApplication) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Ya has aplicado a esta vacante anteriormente',
+          isDuplicate: true,
+          previousApplication: {
+            vacancyId: duplicateApplication.vacancyId,
+            appliedAt: duplicateApplication.createdAt || duplicateApplication.appliedAt,
+            status: duplicateApplication.status,
+            aiScore: duplicateApplication.aiScore
+          }
+        },
+        { status: 400 }
+      );
+    }
+    
+    // Verificar si tiene aplicaciones activas en otros procesos
+    const activeStatuses = ['applied', 'screening', 'interview', 'evaluation', 'offer'];
+    const activeApplications = existingCandidates.filter(c => {
+      const candidateVacancyId = c.vacancyId?._id?.toString() || c.vacancyId?.toString() || c.vacancyId;
+      return candidateVacancyId !== vacancyId && activeStatuses.includes(c.status);
+    });
+    
+    if (activeApplications.length > 0) {
+      // Registrar como duplicado pero permitir la aplicación
+      const previousApps = activeApplications.map(app => ({
+        vacancyId: app.vacancyId?._id?.toString() || app.vacancyId?.toString() || app.vacancyId,
+        appliedAt: app.createdAt || app.appliedAt || new Date(),
+        status: app.status,
+        aiScore: app.aiScore
+      }));
+      
+      // Continuar con el proceso pero marcar como duplicado
+      console.log('⚠️ Candidato tiene aplicaciones activas en otros procesos:', previousApps);
+    }
+    
     // Guardar CV en Vercel Blob (almacenamiento en la nube)
     const bytes = await cvFile.arrayBuffer();
     const buffer = Buffer.from(bytes);
@@ -133,7 +184,7 @@ export async function POST(request: NextRequest) {
     try {
       aiAnalysis = await analyzeCandidateCV(
         cvText,
-        vacancy.optimizedDescription || vacancy.description,
+        vacancy.optimizedDescription || vacancy.description || '',
         vacancy.requiredSkills || [],
         aiAgent
       );
@@ -162,6 +213,21 @@ export async function POST(request: NextRequest) {
       console.error('⚠️  Error analizando CV (requiere OPENAI_API_KEY):', error);
     }
     
+      // Preparar información de aplicaciones previas
+      const previousApps = existingCandidates
+        .filter(c => {
+          const candidateVacancyId = c.vacancyId?._id?.toString() || c.vacancyId?.toString() || c.vacancyId;
+          return candidateVacancyId !== vacancyId;
+        })
+        .map(app => ({
+          vacancyId: app.vacancyId?._id?.toString() || app.vacancyId?.toString() || app.vacancyId,
+          appliedAt: app.createdAt || app.appliedAt || new Date(),
+          status: app.status,
+          aiScore: app.aiScore
+        }));
+      
+      const hasActiveApplications = activeApplications.length > 0;
+      
       // Crear candidato con análisis completo
       let candidate;
       if (usingMockData() || !isMongoDBAvailable()) {
@@ -183,6 +249,9 @@ export async function POST(request: NextRequest) {
             strengths: aiAnalysis.strengths,
             concerns: aiAnalysis.concerns
           },
+          previousApplications: previousApps,
+          isDuplicate: hasActiveApplications,
+          duplicateReason: hasActiveApplications ? 'Tiene aplicaciones activas en otros procesos' : undefined,
           appliedAt: new Date().toISOString()
         } as any; // TypeScript cast para compatibilidad con mock
         mockCandidates.push(candidate);
@@ -198,9 +267,15 @@ export async function POST(request: NextRequest) {
         aiScore: aiAnalysis.score,
         aiClassification: mappedClassification,
         aiJustification: aiAnalysis.summary,
-        status: 'applied'
+        status: 'applied',
+        previousApplications: previousApps,
+        isDuplicate: hasActiveApplications,
+        duplicateReason: hasActiveApplications ? 'Tiene aplicaciones activas en otros procesos' : undefined
       });
       console.log('✅ Candidato creado en DB con score:', aiAnalysis.score, 'clasificación:', mappedClassification);
+      if (hasActiveApplications) {
+        console.log('⚠️ Candidato marcado como duplicado - tiene aplicaciones activas');
+      }
     }
     
     // Enviar confirmación por email
