@@ -285,7 +285,7 @@ export default function CandidatesPage() {
                           setPsychometricScore(candidate.genericCV?.technicalTestScore?.toString() || '');
                           setScoreModalOpen(true);
                         }}
-                        className="border-2 border-cap-gray text-cap-gray-lightest hover:border-cap-red hover:text-cap-red font-bold transition-all"
+                        className="border-2 border-cap-gray text-cap-red hover:border-cap-red hover:text-cap-red font-bold transition-all"
                       >
                         <Award className="w-4 h-4 mr-2" />
                         Promedio Técnico
@@ -295,7 +295,7 @@ export default function CandidatesPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        <Button variant="outline" size="sm" className="border-2 border-cap-gray text-cap-gray-lightest hover:border-cap-red hover:text-cap-red font-bold transition-all">
+                        <Button variant="outline" size="sm" className="border-2 border-cap-gray text-cap-red hover:border-cap-red hover:text-cap-red font-bold transition-all">
                           <Eye className="w-4 h-4 mr-2" />
                           Ver Original
                         </Button>
@@ -333,7 +333,7 @@ export default function CandidatesPage() {
                           }
                         }}
                         disabled={generatingCV === candidate._id}
-                        className="border-2 border-cap-gray text-cap-gray-lightest hover:border-cap-red hover:text-cap-red font-bold transition-all disabled:opacity-50"
+                        className="border-2 border-cap-gray text-cap-red hover:border-cap-red hover:text-cap-red font-bold transition-all disabled:opacity-50"
                       >
                         {generatingCV === candidate._id ? (
                           <>
@@ -404,7 +404,7 @@ export default function CandidatesPage() {
                           }
                         }}
                         disabled={generatingCV === candidate._id}
-                        className="border-2 border-cap-gray text-cap-gray-lightest hover:border-cap-red hover:text-cap-red font-bold transition-all disabled:opacity-50"
+                        className="border-2 border-cap-gray text-cap-red hover:border-cap-red hover:text-cap-red font-bold transition-all disabled:opacity-50"
                       >
                         {generatingCV === candidate._id ? (
                           <>
@@ -439,7 +439,7 @@ export default function CandidatesPage() {
                           }
                         }}
                         disabled={generatingInterview === candidate._id}
-                        className="border-2 border-cap-gray text-cap-gray-lightest hover:border-cap-red hover:text-cap-red font-bold transition-all disabled:opacity-50"
+                        className="border-2 border-cap-gray text-cap-red hover:border-cap-red hover:text-cap-red font-bold transition-all disabled:opacity-50"
                       >
                         {generatingInterview === candidate._id ? (
                           <>
@@ -483,7 +483,7 @@ export default function CandidatesPage() {
                       size="sm"
                       onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                       disabled={currentPage === 1}
-                      className="border-2 border-cap-gray text-cap-gray-lightest hover:border-cap-red hover:text-cap-red disabled:opacity-50 disabled:cursor-not-allowed font-bold transition-all"
+                      className="border-2 border-cap-gray text-cap-red hover:border-cap-red hover:text-cap-red disabled:opacity-50 disabled:cursor-not-allowed font-bold transition-all"
                     >
                       <ChevronLeft className="w-4 h-4 mr-1" />
                       Anterior
@@ -512,7 +512,7 @@ export default function CandidatesPage() {
                             className={`w-10 h-10 p-0 ${
                               currentPage === pageNum 
                                 ? 'bg-racing-gradient text-white border-cap-red shadow-racing font-black' 
-                                : 'border-2 border-cap-gray text-cap-gray-lightest hover:border-cap-red hover:text-cap-red font-bold'
+                                : 'border-2 border-cap-gray text-cap-red hover:border-cap-red hover:text-cap-red font-bold'
                             } transition-all`}
                           >
                             {pageNum}
@@ -526,7 +526,7 @@ export default function CandidatesPage() {
                       size="sm"
                       onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                       disabled={currentPage === totalPages}
-                      className="border-2 border-cap-gray text-cap-gray-lightest hover:border-cap-red hover:text-cap-red disabled:opacity-50 disabled:cursor-not-allowed font-bold transition-all"
+                      className="border-2 border-cap-gray text-cap-red hover:border-cap-red hover:text-cap-red disabled:opacity-50 disabled:cursor-not-allowed font-bold transition-all"
                     >
                       Siguiente
                       <ChevronRight className="w-4 h-4 ml-1" />

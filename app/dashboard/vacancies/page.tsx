@@ -204,7 +204,7 @@ export default function VacanciesPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="border-2 border-cap-gray text-cap-gray-lightest hover:border-cap-red hover:text-cap-red font-bold transition-all"
+                              className="border-2 border-cap-gray text-cap-red hover:border-cap-red hover:text-cap-red font-bold transition-all"
                             >
                               <Edit className="w-4 h-4 mr-1" />
                               Editar
