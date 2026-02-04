@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { getClassificationColor, getScoreColor, getStatusColor } from '@/lib/utils';
-import { Search, Mail, Phone, FileText, Trash2, AlertTriangle, X, ChevronLeft, ChevronRight, Filter, Download, Eye, Loader2, MessageSquare } from 'lucide-react';
+import { Search, Mail, Phone, FileText, Trash2, AlertTriangle, X, ChevronLeft, ChevronRight, Filter, Download, Eye, Loader2, MessageSquare, Award } from 'lucide-react';
 
 export default function CandidatesPage() {
   const [candidates, setcandidates] = useState<any[]>([]);
@@ -19,6 +19,10 @@ export default function CandidatesPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [generatingCV, setGeneratingCV] = useState<string | null>(null);
   const [generatingInterview, setGeneratingInterview] = useState<string | null>(null);
+  const [scoreModalOpen, setScoreModalOpen] = useState(false);
+  const [candidateForScore, setCandidateForScore] = useState<any>(null);
+  const [psychometricScore, setPsychometricScore] = useState('');
+  const [savingScore, setSavingScore] = useState(false);
   
   // Paginación
   const [currentPage, setCurrentPage] = useState(1);
@@ -228,13 +232,21 @@ export default function CandidatesPage() {
                         </p>
                       </div>
                       
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-4">
                         <div className="text-right">
                           <div className={`text-2xl font-black ${getScoreColor(candidate.aiScore)}`}>
                             {candidate.aiScore}
                           </div>
                           <div className="text-xs text-cap-gray-lightest font-bold">Puntaje IA</div>
                         </div>
+                        {candidate.genericCV?.technicalTestScore !== undefined && (
+                          <div className="text-right">
+                            <div className={`text-2xl font-black ${getScoreColor(candidate.genericCV.technicalTestScore)}`}>
+                              {candidate.genericCV.technicalTestScore}
+                            </div>
+                            <div className="text-xs text-cap-gray-lightest font-bold">Psicotécnico</div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -265,6 +277,19 @@ export default function CandidatesPage() {
                     )}
 
                     <div className="flex gap-2 pt-2 flex-wrap">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setCandidateForScore(candidate);
+                          setPsychometricScore(candidate.genericCV?.technicalTestScore?.toString() || '');
+                          setScoreModalOpen(true);
+                        }}
+                        className="border-2 border-cap-gray text-cap-gray-lightest hover:border-cap-red hover:text-cap-red font-bold transition-all"
+                      >
+                        <Award className="w-4 h-4 mr-2" />
+                        Promedio Técnico
+                      </Button>
                       <a
                         href={candidate.cvUrl}
                         target="_blank"
@@ -332,10 +357,19 @@ export default function CandidatesPage() {
                             try {
                               const response = await axios.post(`/api/candidates/${candidate._id}/generate-cv`);
                               if (response.data.success && response.data.data.pdfUrl) {
+                                // Descargar el archivo usando fetch para obtener el blob
+                                const pdfUrl = response.data.data.pdfUrl;
+                                const pdfResponse = await fetch(pdfUrl);
+                                const blob = await pdfResponse.blob();
+                                const url = window.URL.createObjectURL(blob);
                                 const link = document.createElement('a');
-                                link.href = response.data.data.pdfUrl;
-                                link.download = `CV-Generico-${candidate.fullName}.pdf`;
+                                link.href = url;
+                                link.download = `CV-Generico-${candidate.fullName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+                                document.body.appendChild(link);
                                 link.click();
+                                document.body.removeChild(link);
+                                window.URL.revokeObjectURL(url);
+                                
                                 // Actualizar el candidato
                                 const updatedCandidates = candidates.map(c => 
                                   c._id === candidate._id 
@@ -351,11 +385,22 @@ export default function CandidatesPage() {
                               setGeneratingCV(null);
                             }
                           } else {
-                            // Si ya existe, descargarlo directamente
-                            const link = document.createElement('a');
-                            link.href = candidate.genericCV.pdfUrl;
-                            link.download = `CV-Generico-${candidate.fullName}.pdf`;
-                            link.click();
+                            // Si ya existe, descargarlo usando fetch para obtener el blob
+                            try {
+                              const pdfResponse = await fetch(candidate.genericCV.pdfUrl);
+                              const blob = await pdfResponse.blob();
+                              const url = window.URL.createObjectURL(blob);
+                              const link = document.createElement('a');
+                              link.href = url;
+                              link.download = `CV-Generico-${candidate.fullName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                              window.URL.revokeObjectURL(url);
+                            } catch (error) {
+                              console.error('Error descargando CV genérico:', error);
+                              alert('Error al descargar CV genérico');
+                            }
                           }
                         }}
                         disabled={generatingCV === candidate._id}
@@ -493,6 +538,132 @@ export default function CandidatesPage() {
           )}
         </>
       )}
+
+      {/* Modal para Promedio Técnico (Psicotécnico) */}
+      <Dialog open={scoreModalOpen} onOpenChange={setScoreModalOpen}>
+        <DialogContent className="bg-cap-gray-dark border-2 border-cap-red text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black text-white">
+              Promedio Técnico - Prueba Psicotécnica
+            </DialogTitle>
+            <DialogDescription className="text-cap-gray-lightest font-semibold text-base mt-4">
+              {candidateForScore && (
+                <>
+                  <p className="mb-4">Ingresa el puntaje de la prueba psicotécnica para:</p>
+                  <div className="p-4 bg-cap-black rounded-lg border border-cap-gray">
+                    <p className="font-bold text-white text-lg mb-1">{candidateForScore.fullName}</p>
+                    <p className="text-sm text-cap-gray-lightest">{candidateForScore.email}</p>
+                  </div>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            <label className="block text-sm font-bold text-white mb-2">
+              Puntaje Psicotécnico (0-100)
+            </label>
+            <Input
+              type="number"
+              min="0"
+              max="100"
+              value={psychometricScore}
+              onChange={(e) => setPsychometricScore(e.target.value)}
+              placeholder="Ej: 85"
+              className="bg-cap-black border-2 border-cap-gray text-white placeholder:text-cap-gray focus:border-cap-red font-semibold"
+            />
+            <p className="text-xs text-cap-gray-lightest mt-2 font-semibold">
+              Este puntaje se agregará al CV genérico del candidato
+            </p>
+          </div>
+          <DialogFooter className="mt-6 flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setScoreModalOpen(false);
+                setCandidateForScore(null);
+                setPsychometricScore('');
+              }}
+              disabled={savingScore}
+              className="flex-1 border-2 border-cap-gray text-cap-gray-lightest hover:border-cap-red hover:text-cap-red font-bold transition-all"
+            >
+              <X className="mr-2 h-4 w-4" />
+              Cancelar
+            </Button>
+            <Button
+              onClick={async () => {
+                const score = parseInt(psychometricScore);
+                if (isNaN(score) || score < 0 || score > 100) {
+                  alert('Por favor ingresa un puntaje válido entre 0 y 100');
+                  return;
+                }
+
+                setSavingScore(true);
+                try {
+                  // Primero actualizar el candidato con el puntaje psicotécnico
+                  const updateResponse = await axios.put(`/api/candidates/${candidateForScore._id}`, {
+                    genericCV: {
+                      ...candidateForScore.genericCV,
+                      technicalTestScore: score,
+                      summary: candidateForScore.genericCV?.summary || [],
+                      generatedAt: candidateForScore.genericCV?.generatedAt || new Date(),
+                      pdfUrl: candidateForScore.genericCV?.pdfUrl
+                    }
+                  });
+
+                  if (updateResponse.data.success) {
+                    // Regenerar el CV genérico con el nuevo puntaje psicotécnico
+                    const cvResponse = await axios.post(`/api/candidates/${candidateForScore._id}/generate-cv`);
+                    
+                    if (cvResponse.data.success) {
+                      // Actualizar el candidato en la lista con el CV regenerado
+                      const updatedCandidates = candidates.map(c => 
+                        c._id === candidateForScore._id 
+                          ? { ...c, genericCV: cvResponse.data.data }
+                          : c
+                      );
+                      setcandidates(updatedCandidates);
+                      setScoreModalOpen(false);
+                      setCandidateForScore(null);
+                      setPsychometricScore('');
+                      alert('Puntaje guardado y CV genérico regenerado exitosamente');
+                    } else {
+                      // Si falla la regeneración, al menos guardar el puntaje
+                      const updatedCandidates = candidates.map(c => 
+                        c._id === candidateForScore._id 
+                          ? { ...c, genericCV: updateResponse.data.data.genericCV }
+                          : c
+                      );
+                      setcandidates(updatedCandidates);
+                      alert('Puntaje guardado, pero hubo un error al regenerar el CV genérico');
+                    }
+                  } else {
+                    alert('Error al guardar el puntaje');
+                  }
+                } catch (error: any) {
+                  console.error('Error guardando puntaje:', error);
+                  alert(error.response?.data?.error || 'Error al guardar el puntaje');
+                } finally {
+                  setSavingScore(false);
+                }
+              }}
+              disabled={savingScore}
+              className="flex-1 bg-cap-red hover:bg-cap-red-dark text-white font-black transition-all hover:scale-105"
+            >
+              {savingScore ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <Award className="mr-2 h-4 w-4" />
+                  Guardar Puntaje
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal de Confirmación de Eliminación */}
       <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
