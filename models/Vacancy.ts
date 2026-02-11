@@ -9,21 +9,34 @@ export interface IVacancy extends Document {
   title: string; // Nombre de Puesto
   numberOfPositions: number;
   positionScale: string;
-  requiredProfession: string;
-  requiredSpecialties?: string;
-  experienceYears: number;
   mainFunctions: string; // Describa Brevemente las Principales Funciones
-  evaluationLevel: string;
+  evaluationLevel?: string; // Opcional para solicitudes básicas
   evaluationAreas: Array<{
     area: string;
     percentage: number;
   }>;
   jobDescriptorFile?: string; // URL del archivo adjunto
   
+  // Campos reorganizados
+  company?: string; // Empresa: Corporativo, Mansiago, S&M, etc.
+  location: string;
+  contractType?: string; // Tipo de contrato: Tiempo completo, Medio tiempo, etc.
+  
+  // Criterios de evaluación (movidos desde información de solicitud)
+  educationLevel?: string; // Nivel educativo requerido
+  requiredProfessions?: string[]; // 3 campos de profesiones requeridas
+  preferredProfession?: string; // Profesión preferible
+  experienceYearsMin?: number; // Años de experiencia mínimos
+  experienceYearsMax?: number; // Años de experiencia máximos
+  
+  // Campos legacy (mantener para compatibilidad)
+  requiredProfession?: string; // Mantener por compatibilidad
+  requiredSpecialties?: string;
+  experienceYears?: number; // Mantener por compatibilidad
+  
   // Campos existentes (mantener para compatibilidad)
   description?: string; // Mantener por compatibilidad
   optimizedDescription?: string;
-  location: string;
   salary: {
     min: number;
     max: number;
@@ -31,12 +44,14 @@ export interface IVacancy extends Document {
   };
   requiredSkills: string[];
   desiredSkills: string[];
-  educationLevel: string;
-  employmentType: 'full-time' | 'part-time' | 'contract' | 'internship';
-  status: 'draft' | 'published' | 'closed';
+  employmentType: 'full-time' | 'part-time' | 'contract' | 'internship' | 'consulting' | 'practice';
+  status: 'draft' | 'published' | 'closed' | 'pending';
   aiAgentId?: string;
   publishedAt?: Date;
   closedAt?: Date;
+  applicationDeadline?: Date; // Fecha límite para recibir CVs
+  timecv?: string; // Tiempo de recepción de CVs: '1 semana', '1 mes', '2 meses', '3 meses', '6 meses', '1 año'
+  timecvExpiresAt?: Date; // Fecha de expiración calculada basada en timecv
   createdAt: Date;
   updatedAt: Date;
 }
@@ -50,11 +65,24 @@ const VacancySchema = new Schema<IVacancy>({
   title: { type: String, required: true }, // Nombre de Puesto
   numberOfPositions: { type: Number, required: true, default: 1 },
   positionScale: { type: String, required: true },
-  requiredProfession: { type: String, required: true },
-  requiredSpecialties: { type: String },
-  experienceYears: { type: Number, required: true, default: 0 },
   mainFunctions: { type: String, required: true }, // Describa Brevemente las Principales Funciones
-  evaluationLevel: { type: String, required: true },
+  evaluationLevel: { type: String }, // Opcional para solicitudes básicas
+  
+  // Campos reorganizados
+  company: { type: String },
+  contractType: { type: String },
+  
+  // Criterios de evaluación
+  educationLevel: { type: String },
+  requiredProfessions: [{ type: String }], // 3 campos
+  preferredProfession: { type: String },
+  experienceYearsMin: { type: Number },
+  experienceYearsMax: { type: Number },
+  
+  // Campos legacy (mantener para compatibilidad)
+  requiredProfession: { type: String },
+  requiredSpecialties: { type: String },
+  experienceYears: { type: Number, default: 0 },
   evaluationAreas: [{
     area: { type: String, required: true },
     percentage: { type: Number, required: true, min: 0, max: 100 }
@@ -72,20 +100,22 @@ const VacancySchema = new Schema<IVacancy>({
   },
   requiredSkills: [{ type: String }],
   desiredSkills: [{ type: String }],
-  educationLevel: { type: String },
   employmentType: { 
     type: String, 
-    enum: ['full-time', 'part-time', 'contract', 'internship'],
+    enum: ['full-time', 'part-time', 'contract', 'internship', 'consulting', 'practice'],
     default: 'full-time'
   },
   status: { 
     type: String, 
-    enum: ['draft', 'published', 'closed'],
+    enum: ['draft', 'published', 'closed', 'pending'],
     default: 'draft'
   },
   aiAgentId: { type: String },
   publishedAt: { type: Date },
-  closedAt: { type: Date }
+  closedAt: { type: Date },
+  applicationDeadline: { type: Date }, // Fecha límite para recibir CVs
+  timecv: { type: String }, // Tiempo de recepción de CVs
+  timecvExpiresAt: { type: Date } // Fecha de expiración calculada
 }, {
   timestamps: true
 });

@@ -1,8 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB, { isMongoDBAvailable } from '@/lib/mongodb';
 import Vacancy from '@/models/Vacancy';
+import Notification from '@/models/Notification';
 import { optimizeJobDescription } from '@/lib/openai';
 import { mockVacancies, usingMockData } from '@/lib/mock-data';
+
+// Función para calcular la fecha de expiración basada en timecv
+function calculateTimecvExpiresAt(timecv: string, startDate: Date = new Date()): Date {
+  const expiresAt = new Date(startDate);
+  
+  switch (timecv) {
+    case '1 semana':
+      expiresAt.setDate(expiresAt.getDate() + 7);
+      break;
+    case '1 mes':
+      expiresAt.setMonth(expiresAt.getMonth() + 1);
+      break;
+    case '2 meses':
+      expiresAt.setMonth(expiresAt.getMonth() + 2);
+      break;
+    case '3 meses':
+      expiresAt.setMonth(expiresAt.getMonth() + 3);
+      break;
+    case '6 meses':
+      expiresAt.setMonth(expiresAt.getMonth() + 6);
+      break;
+    case '1 año':
+      expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+      break;
+    default:
+      return expiresAt;
+  }
+  
+  return expiresAt;
+}
 
 export async function GET(
   request: NextRequest,
@@ -51,6 +82,9 @@ export async function PUT(
     await connectDB();
     const body = await request.json();
     
+    // Obtener la vacante actual para comparar estados
+    let oldVacancy: any = null;
+    
     // Optimizar descripción si se solicita
     if (body.optimizeWithAI && body.description) {
       try {
@@ -64,9 +98,19 @@ export async function PUT(
       }
     }
     
+    // Calcular timecvExpiresAt si se actualiza timecv
+    if (body.timecv) {
+      const startDate = body.publishedAt ? new Date(body.publishedAt) : new Date();
+      body.timecvExpiresAt = calculateTimecvExpiresAt(body.timecv, startDate);
+    }
+    
     // Actualizar fechas según estado
     if (body.status === 'published' && !body.publishedAt) {
       body.publishedAt = new Date();
+      // Si hay timecv y no hay timecvExpiresAt, calcularlo
+      if (body.timecv && !body.timecvExpiresAt) {
+        body.timecvExpiresAt = calculateTimecvExpiresAt(body.timecv, body.publishedAt);
+      }
     }
     if (body.status === 'closed' && !body.closedAt) {
       body.closedAt = new Date();
@@ -83,9 +127,21 @@ export async function PUT(
         );
       }
       
+      oldVacancy = { ...mockVacancies[index] };
       mockVacancies[index] = { ...mockVacancies[index], ...body, updatedAt: new Date() };
-      return NextResponse.json({ success: true, data: mockVacancies[index], mock: true });
+      const updatedVacancy = mockVacancies[index];
+      
+      // Crear notificación si se cerró la vacante
+      if (body.status === 'closed' && oldVacancy.status !== 'closed') {
+        // En modo mock, solo loguear
+        console.log(`📢 Notificación: Vacante "${updatedVacancy.title}" ha sido cerrada`);
+      }
+      
+      return NextResponse.json({ success: true, data: updatedVacancy, mock: true });
     }
+    
+    // Obtener la vacante antes de actualizar
+    oldVacancy = await Vacancy.findById(params.id);
     
     const vacancy = await Vacancy.findByIdAndUpdate(
       params.id,
@@ -98,6 +154,21 @@ export async function PUT(
         { success: false, error: 'Vacante no encontrada' },
         { status: 404 }
       );
+    }
+    
+    // Crear notificación si se cerró la vacante
+    if (body.status === 'closed' && oldVacancy && oldVacancy.status !== 'closed') {
+      try {
+        await Notification.create({
+          type: 'vacancy_closed',
+          title: 'Vacante Cerrada',
+          message: `La vacante "${vacancy.title}" ha sido cerrada. ${body.closedAt ? `Fecha de cierre: ${new Date(body.closedAt).toLocaleDateString('es-MX')}` : ''}`,
+          relatedVacancyId: vacancy._id,
+          read: false
+        });
+      } catch (notifError) {
+        console.error('Error creando notificación:', notifError);
+      }
     }
     
     return NextResponse.json({ success: true, data: vacancy });

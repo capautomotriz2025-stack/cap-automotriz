@@ -14,7 +14,7 @@ export interface ICandidate extends Document {
   aiJustification?: string;
   
   // Estado del proceso
-  status: 'applied' | 'screening' | 'interview' | 'evaluation' | 'offer' | 'hired' | 'rejected';
+  status: 'applied' | 'screening' | 'interview' | 'evaluation' | 'interview-boss' | 'offer' | 'hired' | 'rejected' | 'declined';
   
   // Control de duplicados
   previousApplications?: Array<{
@@ -81,7 +81,7 @@ const CandidateSchema = new Schema<ICandidate>({
   
   status: { 
     type: String, 
-    enum: ['applied', 'screening', 'interview', 'evaluation', 'offer', 'hired', 'rejected'],
+    enum: ['applied', 'screening', 'interview', 'evaluation', 'interview-boss', 'offer', 'hired', 'rejected', 'declined'],
     default: 'applied'
   },
   

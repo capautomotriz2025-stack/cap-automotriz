@@ -27,10 +27,16 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
     title: '', // Nombre de Puesto
     numberOfPositions: '1',
     positionScale: '',
-    requiredProfession: '',
-    requiredSpecialties: '',
-    experienceYears: '',
     mainFunctions: '', // Describa Brevemente las Principales Funciones
+    company: '', // Empresa
+    location: '', // Ubicación
+    contractType: '', // Tipo de contrato
+    // Criterios de evaluación
+    educationLevel: '',
+    requiredProfessions: ['', '', ''], // 3 campos
+    preferredProfession: '',
+    experienceYearsMin: '',
+    experienceYearsMax: '',
     evaluationLevel: '',
     evaluationAreas: [
       { area: '', percentage: '' },
@@ -41,11 +47,11 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
     ],
     jobDescriptorFile: null as File | null,
     jobDescriptorFileUrl: '',
-    location: '',
     salaryMin: '',
     salaryMax: '',
     currency: 'MXN',
-    employmentType: 'full-time',
+    applicationDeadline: '', // Fecha límite para recibir CVs
+    timecv: '', // Tiempo de recepción de CVs
     status: 'draft',
     aiAgentId: ''
   });
@@ -79,10 +85,17 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
           title: vacancy.title || '',
           numberOfPositions: (vacancy.numberOfPositions || 1).toString(),
           positionScale: vacancy.positionScale || '',
-          requiredProfession: vacancy.requiredProfession || '',
-          requiredSpecialties: vacancy.requiredSpecialties || '',
-          experienceYears: (vacancy.experienceYears || 0).toString(),
           mainFunctions: vacancy.mainFunctions || vacancy.description || '',
+          company: vacancy.company || '',
+          location: vacancy.location || '',
+          contractType: vacancy.contractType || '',
+          educationLevel: vacancy.educationLevel || '',
+          requiredProfessions: vacancy.requiredProfessions && vacancy.requiredProfessions.length > 0
+            ? [...vacancy.requiredProfessions, '', '', ''].slice(0, 3)
+            : ['', '', ''],
+          preferredProfession: vacancy.preferredProfession || '',
+          experienceYearsMin: (vacancy.experienceYearsMin || vacancy.experienceYears || 0).toString(),
+          experienceYearsMax: (vacancy.experienceYearsMax || vacancy.experienceYears || 0).toString(),
           evaluationLevel: vacancy.evaluationLevel || '',
           evaluationAreas: vacancy.evaluationAreas && vacancy.evaluationAreas.length > 0
             ? vacancy.evaluationAreas.map((ea: any) => ({
@@ -104,11 +117,13 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
               ],
           jobDescriptorFile: null,
           jobDescriptorFileUrl: vacancy.jobDescriptorFile || '',
-          location: vacancy.location || '',
           salaryMin: vacancy.salary?.min?.toString() || '',
           salaryMax: vacancy.salary?.max?.toString() || '',
           currency: vacancy.salary?.currency || 'MXN',
-          employmentType: vacancy.employmentType || 'full-time',
+          applicationDeadline: vacancy.applicationDeadline 
+            ? new Date(vacancy.applicationDeadline).toISOString().slice(0, 16)
+            : '',
+          timecv: vacancy.timecv || '',
           status: vacancy.status || 'draft',
           aiAgentId: vacancy.aiAgentId || ''
         });
@@ -195,10 +210,16 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
         title: formData.title,
         numberOfPositions: parseInt(formData.numberOfPositions) || 1,
         positionScale: formData.positionScale,
-        requiredProfession: formData.requiredProfession,
-        requiredSpecialties: formData.requiredSpecialties || undefined,
-        experienceYears: parseInt(formData.experienceYears) || 0,
         mainFunctions: formData.mainFunctions,
+        company: formData.company,
+        location: formData.location,
+        contractType: formData.contractType,
+        // Criterios de evaluación
+        educationLevel: formData.educationLevel,
+        requiredProfessions: formData.requiredProfessions.filter(p => p.trim() !== ''),
+        preferredProfession: formData.preferredProfession || undefined,
+        experienceYearsMin: parseInt(formData.experienceYearsMin) || 0,
+        experienceYearsMax: parseInt(formData.experienceYearsMax) || 0,
         evaluationLevel: formData.evaluationLevel,
         evaluationAreas: formData.evaluationAreas
           .filter(area => area.area.trim() !== '')
@@ -207,13 +228,17 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
             percentage: parseFloat(area.percentage) || 0
           })),
         jobDescriptorFile: jobDescriptorUrl || undefined,
-        location: formData.location,
         salary: {
           min: parseFloat(formData.salaryMin),
           max: parseFloat(formData.salaryMax),
           currency: formData.currency
         },
-        employmentType: formData.employmentType,
+        applicationDeadline: formData.applicationDeadline ? new Date(formData.applicationDeadline) : undefined,
+        timecv: formData.timecv || undefined,
+        // Mantener compatibilidad con campos legacy
+        requiredProfession: formData.requiredProfessions[0] || '',
+        experienceYears: parseInt(formData.experienceYearsMin) || 0,
+        employmentType: 'full-time' as const, // Mantener por compatibilidad
         status: publish ? 'published' : formData.status,
         aiAgentId: formData.aiAgentId || undefined
       };
@@ -360,39 +385,56 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="requiredProfession">Profesión Requerida *</Label>
-                <Input
-                  id="requiredProfession"
+                <Label htmlFor="company">Empresa *</Label>
+                <select
+                  id="company"
                   required
-                  placeholder="ej. Ingeniería en Sistemas"
-                  value={formData.requiredProfession}
-                  onChange={(e) => setFormData({ ...formData, requiredProfession: e.target.value })}
-                />
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={formData.company}
+                  onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                >
+                  <option value="">Seleccione...</option>
+                  <option value="Corporativo">Corporativo</option>
+                  <option value="Mansiago">Mansiago</option>
+                  <option value="S&M">S&M</option>
+                  <option value="Blessing autopartes">Blessing autopartes</option>
+                  <option value="Blessing carrocería">Blessing carrocería</option>
+                  <option value="Didasa">Didasa</option>
+                  <option value="Japan HN">Japan HN</option>
+                  <option value="Inversiones Marlon">Inversiones Marlon</option>
+                </select>
               </div>
             </div>
 
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="requiredSpecialties">Especialidades Requeridas</Label>
+                <Label htmlFor="location">Ubicación *</Label>
                 <Input
-                  id="requiredSpecialties"
-                  placeholder="ej. React, Node.js, TypeScript"
-                  value={formData.requiredSpecialties}
-                  onChange={(e) => setFormData({ ...formData, requiredSpecialties: e.target.value })}
+                  id="location"
+                  required
+                  placeholder="ej. Ciudad de México (Híbrido)"
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="experienceYears">Años de Experiencia *</Label>
-                <Input
-                  id="experienceYears"
-                  type="number"
+                <Label htmlFor="contractType">Tipo de Contrato *</Label>
+                <select
+                  id="contractType"
                   required
-                  min="0"
-                  placeholder="3"
-                  value={formData.experienceYears}
-                  onChange={(e) => setFormData({ ...formData, experienceYears: e.target.value })}
-                />
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={formData.contractType}
+                  onChange={(e) => setFormData({ ...formData, contractType: e.target.value })}
+                >
+                  <option value="">Seleccione...</option>
+                  <option value="Tiempo completo">Tiempo completo</option>
+                  <option value="Medio tiempo">Medio tiempo</option>
+                  <option value="Contrato por horas">Contrato por horas</option>
+                  <option value="Contratos">Contratos</option>
+                  <option value="Práctica Profesional">Práctica Profesional</option>
+                  <option value="consultoría">consultoría</option>
+                </select>
               </div>
             </div>
 
@@ -417,6 +459,81 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
             <CardDescription>Configure cómo se evaluará a los candidatos</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="educationLevel">Nivel Educativo Requerido *</Label>
+              <select
+                id="educationLevel"
+                required
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={formData.educationLevel}
+                onChange={(e) => setFormData({ ...formData, educationLevel: e.target.value })}
+              >
+                <option value="">Seleccione...</option>
+                <option value="Secundaria">Secundaria</option>
+                <option value="Universitaria">Universitaria</option>
+                <option value="Estudiante universitario">Estudiante universitario</option>
+                <option value="Técnico">Técnico</option>
+                <option value="Master (Con Maestría)">Master (Con Maestría)</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Profesiones Requeridas *</Label>
+              <div className="grid md:grid-cols-3 gap-4">
+                {formData.requiredProfessions.map((profession, index) => (
+                  <Input
+                    key={index}
+                    required
+                    placeholder={`Profesión ${index + 1} *`}
+                    value={profession}
+                    onChange={(e) => {
+                      const newProfessions = [...formData.requiredProfessions];
+                      newProfessions[index] = e.target.value;
+                      setFormData({ ...formData, requiredProfessions: newProfessions });
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="preferredProfession">Profesión Preferible</Label>
+              <Input
+                id="preferredProfession"
+                placeholder="ej. Ingeniería en Sistemas"
+                value={formData.preferredProfession}
+                onChange={(e) => setFormData({ ...formData, preferredProfession: e.target.value })}
+              />
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="experienceYearsMin">Años de Experiencia Mínimos *</Label>
+                <Input
+                  id="experienceYearsMin"
+                  type="number"
+                  required
+                  min="0"
+                  placeholder="3"
+                  value={formData.experienceYearsMin}
+                  onChange={(e) => setFormData({ ...formData, experienceYearsMin: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="experienceYearsMax">Años de Experiencia Máximo *</Label>
+                <Input
+                  id="experienceYearsMax"
+                  type="number"
+                  required
+                  min="0"
+                  placeholder="5"
+                  value={formData.experienceYearsMax}
+                  onChange={(e) => setFormData({ ...formData, experienceYearsMax: e.target.value })}
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="evaluationLevel">Nivel de Evaluación *</Label>
               <select
@@ -505,42 +622,13 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
           </CardContent>
         </Card>
 
-        {/* Información Adicional */}
+        {/* Salario */}
         <Card>
           <CardHeader>
-            <CardTitle>Información Adicional</CardTitle>
-            <CardDescription>Ubicación, salario y tipo de empleo</CardDescription>
+            <CardTitle>Información de Salario</CardTitle>
+            <CardDescription>Rango salarial para el puesto</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="location">Ubicación *</Label>
-                <Input
-                  id="location"
-                  required
-                  placeholder="ej. Ciudad de México (Híbrido)"
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="employmentType">Tipo de Empleo *</Label>
-                <select
-                  id="employmentType"
-                  required
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={formData.employmentType}
-                  onChange={(e) => setFormData({ ...formData, employmentType: e.target.value })}
-                >
-                  <option value="full-time">Tiempo Completo</option>
-                  <option value="part-time">Medio Tiempo</option>
-                  <option value="contract">Contrato</option>
-                  <option value="internship">Prácticas</option>
-                </select>
-              </div>
-            </div>
-
             <div className="grid md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="salaryMin">Salario Mínimo *</Label>
@@ -579,6 +667,48 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
                   <option value="EUR">EUR (Euros)</option>
                 </select>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Fecha Límite de Recepción de CVs */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Fecha Límite de Recepción de CVs</CardTitle>
+            <CardDescription>Establece hasta cuándo se recibirán aplicaciones para esta vacante</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="applicationDeadline">Fecha y Hora Límite</Label>
+              <Input
+                id="applicationDeadline"
+                type="datetime-local"
+                value={formData.applicationDeadline}
+                onChange={(e) => setFormData({ ...formData, applicationDeadline: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Cuando llegue esta fecha, se generará una notificación automática
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="timecv">Tiempo de Recepción de CVs</Label>
+              <select
+                id="timecv"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={formData.timecv}
+                onChange={(e) => setFormData({ ...formData, timecv: e.target.value })}
+              >
+                <option value="">Seleccione un tiempo...</option>
+                <option value="1 semana">1 semana</option>
+                <option value="1 mes">1 mes</option>
+                <option value="2 meses">2 meses</option>
+                <option value="3 meses">3 meses</option>
+                <option value="6 meses">6 meses</option>
+                <option value="1 año">1 año</option>
+              </select>
+              <p className="text-xs text-muted-foreground">
+                El tiempo se calculará desde la fecha de publicación. Puedes actualizarlo después desde la tabla de vacantes.
+              </p>
             </div>
           </CardContent>
         </Card>

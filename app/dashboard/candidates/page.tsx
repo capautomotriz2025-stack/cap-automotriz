@@ -262,7 +262,12 @@ export default function CandidatesPage() {
                     <div className="grid md:grid-cols-2 gap-2 text-sm">
                       <div className="flex items-center gap-2 text-cap-gray-lightest font-semibold">
                         <Mail className="w-4 h-4 text-cap-gray" />
-                        {candidate.email}
+                        <a 
+                          href={`mailto:${candidate.email}`}
+                          className="hover:text-cap-red hover:underline transition-colors cursor-pointer"
+                        >
+                          {candidate.email}
+                        </a>
                       </div>
                       <div className="flex items-center gap-2 text-cap-gray-lightest font-semibold">
                         <Phone className="w-4 h-4 text-cap-gray" />
@@ -297,7 +302,7 @@ export default function CandidatesPage() {
                       >
                         <Button variant="outline" size="sm" className="border-2 border-cap-gray text-cap-red hover:border-cap-red hover:text-cap-red font-bold transition-all">
                           <Eye className="w-4 h-4 mr-2" />
-                          Ver Original
+                          CV Original
                         </Button>
                       </a>
                       <Button
@@ -343,7 +348,7 @@ export default function CandidatesPage() {
                         ) : (
                           <>
                             <FileText className="w-4 h-4 mr-2" />
-                            Ver Genérico
+                            CV Genérico
                           </>
                         )}
                       </Button>

@@ -16,13 +16,15 @@ import KanbanColumn from './KanbanColumn';
 import CandidateCard from './CandidateCard';
 
 const COLUMNS = [
-  { id: 'applied', title: 'Aplicados', color: 'bg-gray-50 border-gray-200' },
-  { id: 'screening', title: 'Screening', color: 'bg-blue-50 border-blue-200' },
-  { id: 'interview', title: 'Entrevista', color: 'bg-yellow-50 border-yellow-200' },
+  { id: 'applied', title: 'Aplicaciones', color: 'bg-gray-50 border-gray-200' },
+  { id: 'screening', title: 'En revisión', color: 'bg-blue-50 border-blue-200' },
+  { id: 'interview', title: 'Entrevista RH', color: 'bg-yellow-50 border-yellow-200' },
   { id: 'evaluation', title: 'Evaluación', color: 'bg-purple-50 border-purple-200' },
-  { id: 'offer', title: 'Oferta', color: 'bg-green-50 border-green-200' },
+  { id: 'interview-boss', title: 'Entrevista jefe', color: 'bg-orange-50 border-orange-200' },
+  { id: 'offer', title: 'En oferta', color: 'bg-green-50 border-green-200' },
   { id: 'hired', title: 'Contratado', color: 'bg-emerald-50 border-emerald-200' },
-  { id: 'rejected', title: 'Rechazado', color: 'bg-red-50 border-red-200' }
+  { id: 'rejected', title: 'Rechazado', color: 'bg-red-50 border-red-200' },
+  { id: 'declined', title: 'Declinaron', color: 'bg-gray-50 border-gray-200' }
 ];
 
 interface KanbanBoardProps {

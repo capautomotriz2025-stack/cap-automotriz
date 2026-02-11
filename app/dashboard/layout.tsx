@@ -19,12 +19,15 @@ import {
   Bot,
   UserCog,
   Gauge,
-  Loader2
+  Loader2,
+  FileText
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 
 const baseNavigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: Gauge, badge: null, role: null },
+  { name: 'Inicio', href: '/dashboard', icon: Gauge, badge: null, role: null },
+  { name: 'Solicitudes', href: '/dashboard/requests', icon: FileText, badge: null, role: null },
   { name: 'Vacantes', href: '/dashboard/vacancies', icon: Briefcase, badge: null, role: null },
   { name: 'Evaluados', href: '/dashboard/candidates', icon: Users, badge: null, role: null },
   { name: 'Kanban', href: '/dashboard/kanban', icon: Kanban, badge: null, role: null },
@@ -41,11 +44,46 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   // Filtrar navegación según rol
   const navigation = baseNavigation.filter(item => 
     !item.role || (session?.user?.role === item.role)
   );
+
+  // Obtener conteo de notificaciones no leídas
+  useEffect(() => {
+    const fetchNotificationCount = async () => {
+      try {
+        const response = await axios.get('/api/notifications');
+        if (response.data.success) {
+          setNotificationCount(response.data.unreadCount || 0);
+        }
+      } catch (error) {
+        console.error('Error fetching notification count:', error);
+      }
+    };
+
+    fetchNotificationCount();
+    // Verificar cada 30 segundos
+    const interval = setInterval(fetchNotificationCount, 30000);
+    
+    // Verificar y crear notificaciones de vacantes expiradas cada minuto
+    const checkExpiredVacancies = async () => {
+      try {
+        await axios.post('/api/notifications');
+        fetchNotificationCount(); // Actualizar conteo después de crear notificaciones
+      } catch (error) {
+        console.error('Error checking expired vacancies:', error);
+      }
+    };
+    const expiredInterval = setInterval(checkExpiredVacancies, 60000);
+    
+    return () => {
+      clearInterval(interval);
+      clearInterval(expiredInterval);
+    };
+  }, []);
 
   if (status === 'loading') {
     return (
@@ -88,7 +126,7 @@ export default function DashboardLayout({
                   CAP RECRUIT
                 </h1>
                 <p className="text-xs text-white/70 uppercase tracking-widest font-bold">
-                  Dashboard
+                  Inicio
                 </p>
               </div>
             </div>
@@ -211,16 +249,17 @@ export default function DashboardLayout({
                 <Zap className="w-3 h-3 mr-1" />
                 IA Activa
               </Badge>
-              {/* Notificaciones - Se activará cuando haya emails enviados a candidatos */}
-              <Button variant="outline" size="icon" className="border-2 border-cap-red hover:bg-cap-red hover:text-white transition-all">
-                <Bell className="h-5 w-5 text-cap-red transition-colors" />
-                {/* TODO: Cuando se implemente la sección de emails, aquí aparecerá:
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-cap-red rounded-full text-xs text-white flex items-center justify-center font-bold shadow-racing">
-                      {notificationCount}
+              {/* Notificaciones */}
+              <Link href="/dashboard/notifications">
+                <Button variant="outline" size="icon" className="relative border-2 border-cap-red hover:bg-cap-red hover:text-white transition-all">
+                  <Bell className="h-5 w-5 text-cap-red transition-colors" />
+                  {notificationCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-cap-red rounded-full text-xs text-white flex items-center justify-center font-bold shadow-racing animate-pulse">
+                      {notificationCount > 9 ? '9+' : notificationCount}
                     </span>
-                    Ejemplo: "Email enviado a Juan Pérez - Estado: En entrevista" 
-                */}
-              </Button>
+                  )}
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
