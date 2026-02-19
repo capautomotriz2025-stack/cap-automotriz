@@ -20,13 +20,15 @@ import {
   UserCog,
   Gauge,
   Loader2,
-  FileText
+  FileText,
+  Home
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const baseNavigation = [
-  { name: 'Inicio', href: '/dashboard', icon: Gauge, badge: null, role: null },
+  { name: 'Inicio', href: '/dashboard/inicio', icon: Home, badge: null, role: null },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, badge: null, role: null },
   { name: 'Solicitudes', href: '/dashboard/requests', icon: FileText, badge: null, role: null },
   { name: 'Vacantes', href: '/dashboard/vacancies', icon: Briefcase, badge: null, role: null },
   { name: 'Evaluados', href: '/dashboard/candidates', icon: Users, badge: null, role: null },
@@ -154,7 +156,9 @@ export default function DashboardLayout({
             </p>
             {navigation.map((item) => {
               const isActive = pathname === item.href ||
-                (item.href !== '/dashboard' && pathname?.startsWith(item.href));
+                (item.href !== '/dashboard/inicio' && item.href !== '/dashboard' && pathname?.startsWith(item.href)) ||
+                (item.href === '/dashboard' && pathname === '/dashboard') ||
+                (item.href === '/dashboard/inicio' && pathname === '/dashboard/inicio');
 
               return (
                 <Link

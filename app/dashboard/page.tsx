@@ -14,14 +14,7 @@ import {
   Calendar,
   XCircle,
   TrendingUp,
-  TrendingDown,
-  Briefcase,
-  Plus,
-  ArrowRight,
-  Target,
-  Bot,
-  BarChart3,
-  AlertCircle
+  TrendingDown
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
@@ -68,7 +61,7 @@ const KPICard = ({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="text-3xl font-black text-white mb-1">{value}</div>
+        <div className="text-2xl font-black text-white mb-1">{value}</div>
         {subtitle && (
           <div className="text-xs text-cap-gray-lightest font-semibold mb-2">{subtitle}</div>
         )}
@@ -94,13 +87,13 @@ const PieChartCard = ({
   
   return (
     <Card className="border-2 border-cap-gray bg-cap-gray-dark/80 backdrop-blur-sm">
-      <CardHeader>
-        <CardTitle className="text-lg font-black text-white">{title}</CardTitle>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm lg:text-base font-black text-white">{title}</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="flex flex-col lg:flex-row gap-4">
-          <div className="flex-1">
-            <ResponsiveContainer width="100%" height={250}>
+      <CardContent className="p-3">
+        <div className="flex flex-col lg:flex-row gap-3">
+          <div className="flex-1 flex items-center justify-center min-h-[180px] lg:min-h-[200px]">
+            <ResponsiveContainer width="100%" height={200}>
               <PieChart>
                 <Pie
                   data={data}
@@ -108,7 +101,8 @@ const PieChartCard = ({
                   cy="50%"
                   labelLine={false}
                   label={(entry: any) => `${entry.percentage}%`}
-                  outerRadius={80}
+                  outerRadius={55}
+                  innerRadius={10}
                   fill="#8884d8"
                   dataKey="value"
                 >
@@ -120,17 +114,17 @@ const PieChartCard = ({
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="flex-1 space-y-2">
+          <div className="flex-1 space-y-1 lg:space-y-1.5">
             {data.map((item, index) => (
-              <div key={item.name} className="flex items-center justify-between p-2 bg-cap-black rounded-lg">
-                <div className="flex items-center gap-2">
+              <div key={item.name} className="flex items-center justify-between p-1.5 bg-cap-black rounded-lg">
+                <div className="flex items-center gap-1.5 min-w-0 flex-1">
                   <div 
-                    className="w-4 h-4 rounded" 
+                    className="w-3 h-3 rounded flex-shrink-0" 
                     style={{ backgroundColor: chartColors[index % chartColors.length] }}
                   />
-                  <span className="text-sm font-semibold text-white">{item.name}</span>
+                  <span className="text-xs font-semibold text-white truncate">{item.name}</span>
                 </div>
-                <span className="text-sm font-bold text-cap-gray-lightest">{item.value}</span>
+                <span className="text-xs font-bold text-cap-gray-lightest ml-1.5 flex-shrink-0">{item.value}</span>
               </div>
             ))}
           </div>
@@ -170,8 +164,6 @@ export default function DashboardPage() {
     byCompany: [],
     byStatus: []
   });
-  const [topCandidates, setTopCandidates] = useState<any[]>([]);
-  const [recentVacancies, setRecentVacancies] = useState<any[]>([]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -256,29 +248,41 @@ export default function DashboardPage() {
         });
 
         // Calcular datos para gráficos
-        // Vacantes por Departamento
+        // Vacantes por Departamento - Filtrar valores vacíos y ordenar
         const departmentCounts: Record<string, number> = {};
         vacancies.forEach((v: any) => {
-          const dept = v.department || 'Sin departamento';
-          departmentCounts[dept] = (departmentCounts[dept] || 0) + 1;
+          const dept = v.department?.trim() || 'Sin departamento';
+          if (dept && dept !== 'Sin departamento') {
+            departmentCounts[dept] = (departmentCounts[dept] || 0) + 1;
+          } else {
+            departmentCounts['Sin departamento'] = (departmentCounts['Sin departamento'] || 0) + 1;
+          }
         });
-        const byDepartment = Object.entries(departmentCounts).map(([name, value]) => ({
-          name,
-          value,
-          percentage: totalProcessesRequested > 0 ? (((value as number) / totalProcessesRequested) * 100).toFixed(1) : '0'
-        }));
+        const byDepartment = Object.entries(departmentCounts)
+          .map(([name, value]) => ({
+            name,
+            value,
+            percentage: totalProcessesRequested > 0 ? (((value as number) / totalProcessesRequested) * 100).toFixed(1) : '0'
+          }))
+          .sort((a, b) => b.value - a.value);
 
-        // Vacantes por Empresa
+        // Vacantes por Empresa - Filtrar valores vacíos y ordenar
         const companyCounts: Record<string, number> = {};
         vacancies.forEach((v: any) => {
-          const company = v.company || 'Sin empresa';
-          companyCounts[company] = (companyCounts[company] || 0) + 1;
+          const company = v.company?.trim() || 'Sin empresa';
+          if (company && company !== 'Sin empresa') {
+            companyCounts[company] = (companyCounts[company] || 0) + 1;
+          } else {
+            companyCounts['Sin empresa'] = (companyCounts['Sin empresa'] || 0) + 1;
+          }
         });
-        const byCompany = Object.entries(companyCounts).map(([name, value]) => ({
-          name,
-          value,
-          percentage: totalProcessesRequested > 0 ? (((value as number) / totalProcessesRequested) * 100).toFixed(1) : '0'
-        }));
+        const byCompany = Object.entries(companyCounts)
+          .map(([name, value]) => ({
+            name,
+            value,
+            percentage: totalProcessesRequested > 0 ? (((value as number) / totalProcessesRequested) * 100).toFixed(1) : '0'
+          }))
+          .sort((a, b) => b.value - a.value);
 
         // Recursos por Estado del Proceso
         const statusCounts: Record<string, number> = {};
@@ -318,20 +322,6 @@ export default function DashboardPage() {
           byCompany: byCompany.slice(0, 5), // Top 5
           byStatus: byStatus
         });
-
-        // Top 5 candidatos por score
-        setTopCandidates(
-          candidates
-            .map((c: any) => ({
-              ...c,
-              displayScore: c.aiAnalysis?.score || c.aiScore || 0
-            }))
-            .sort((a: any, b: any) => b.displayScore - a.displayScore)
-            .slice(0, 5)
-        );
-
-        // Últimas 3 vacantes
-        setRecentVacancies(vacancies.slice(0, 3));
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -353,169 +343,15 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-black text-white">Inicio CAP</h1>
-          <p className="text-cap-gray-lightest mt-2 text-lg font-semibold">
-            Bienvenido a tu panel de reclutamiento inteligente
-          </p>
-        </div>
-      </div>
-
-      {/* Main Grid - Acciones Rápidas y Top Candidatos */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Acciones Rápidas - 2 columnas */}
-        <Card className="lg:col-span-2 border-2 border-cap-gray bg-cap-gray-dark/80 backdrop-blur-sm hover:shadow-racing transition-all">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-2xl font-black text-white">Acciones Rápidas</CardTitle>
-                <CardDescription className="text-base mt-1 text-cap-gray-lightest font-semibold">
-                  Accede a las funciones principales del sistema
-                </CardDescription>
-              </div>
-              <BarChart3 className="h-8 w-8 text-cap-red" />
-            </div>
-          </CardHeader>
-          <CardContent className="grid md:grid-cols-2 gap-4">
-            <Link href="/dashboard/vacancies/new">
-              <div className="group p-6 border-2 border-cap-gray rounded-xl hover:border-cap-red hover:bg-cap-black transition-all cursor-pointer">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-racing-gradient rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform shadow-racing">
-                    <Plus className="h-6 w-6 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-lg mb-1 text-white">Crear Vacante</h3>
-                    <p className="text-sm text-cap-gray-lightest font-semibold">
-                      Publica una nueva posición con IA
-                    </p>
-                  </div>
-                  <ArrowRight className="h-5 w-5 text-cap-gray group-hover:text-cap-red group-hover:translate-x-1 transition-all" />
-                </div>
-              </div>
-            </Link>
-
-            <Link href="/dashboard/kanban">
-              <div className="group p-6 border-2 border-cap-gray rounded-xl hover:border-cap-red hover:bg-cap-black transition-all cursor-pointer">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-cap-gray rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Target className="h-6 w-6 text-cap-gray-lightest" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-lg mb-1 text-white">Tablero Kanban</h3>
-                    <p className="text-sm text-cap-gray-lightest font-semibold">
-                      Gestiona candidatos visualmente
-                    </p>
-                  </div>
-                  <ArrowRight className="h-5 w-5 text-cap-gray group-hover:text-cap-red group-hover:translate-x-1 transition-all" />
-                </div>
-              </div>
-            </Link>
-
-            <Link href="/dashboard/candidates">
-              <div className="group p-6 border-2 border-cap-gray rounded-xl hover:border-cap-red hover:bg-cap-black transition-all cursor-pointer">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-racing-gradient rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform shadow-racing">
-                    <Users className="h-6 w-6 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-lg mb-1 text-white">Ver Candidatos</h3>
-                    <p className="text-sm text-cap-gray-lightest font-semibold">
-                      Revisa todos los postulantes
-                    </p>
-                  </div>
-                  <ArrowRight className="h-5 w-5 text-cap-gray group-hover:text-cap-red group-hover:translate-x-1 transition-all" />
-                </div>
-              </div>
-            </Link>
-
-            <Link href="/dashboard/vacancies">
-              <div className="group p-6 border-2 border-cap-gray rounded-xl hover:border-cap-red hover:bg-cap-black transition-all cursor-pointer">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-cap-gray rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Briefcase className="h-6 w-6 text-cap-gray-lightest" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-lg mb-1 text-white">Gestionar Vacantes</h3>
-                    <p className="text-sm text-cap-gray-lightest font-semibold">
-                      Administra tus posiciones
-                    </p>
-                  </div>
-                  <ArrowRight className="h-5 w-5 text-cap-gray group-hover:text-cap-red group-hover:translate-x-1 transition-all" />
-                </div>
-              </div>
-            </Link>
-
-            <Link href="/dashboard/ai-agents">
-              <div className="group p-6 border-2 border-cap-gray rounded-xl hover:border-cap-red hover:bg-cap-black transition-all cursor-pointer">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-racing-gradient rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform shadow-racing">
-                    <Bot className="h-6 w-6 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-lg mb-1 text-white">Agentes de IA</h3>
-                    <p className="text-sm text-cap-gray-lightest font-semibold">
-                      Configura evaluaciones
-                    </p>
-                  </div>
-                  <ArrowRight className="h-5 w-5 text-cap-gray group-hover:text-cap-red group-hover:translate-x-1 transition-all" />
-                </div>
-              </div>
-            </Link>
-          </CardContent>
-        </Card>
-
-        {/* Top Candidatos - 1 columna */}
-        <Card className="border-2 border-cap-gray bg-cap-gray-dark/80 backdrop-blur-sm hover:shadow-racing transition-all">
-          <CardHeader>
-            <CardTitle className="text-xl font-black text-white">Top Candidatos</CardTitle>
-            <CardDescription className="text-cap-gray-lightest font-semibold">
-              Mejor calificados por IA
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {topCandidates.length === 0 ? (
-              <div className="text-center py-8 text-cap-gray">
-                <AlertCircle className="h-8 w-8 mx-auto mb-2 text-cap-gray" />
-                <p className="text-sm font-semibold">No hay candidatos aún</p>
-              </div>
-            ) : (
-              topCandidates.map((candidate, index) => (
-                <div key={candidate._id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-cap-black transition-colors">
-                  <div className="w-10 h-10 bg-racing-gradient rounded-full flex items-center justify-center text-white font-black shadow-racing">
-                    {index + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm truncate text-white">{candidate.fullName}</p>
-                    <p className="text-xs text-cap-gray truncate font-semibold">
-                      {typeof candidate.vacancyId === 'object' && candidate.vacancyId?.title 
-                        ? candidate.vacancyId.title 
-                        : `Vacante ID: ${candidate.vacancyId}`}
-                    </p>
-                  </div>
-                  <Badge className={`font-black ${
-                    candidate.displayScore >= 90 ? 'bg-cap-red/20 text-cap-red border border-cap-red/30' :
-                    candidate.displayScore >= 80 ? 'bg-racing-gradient text-white shadow-racing' :
-                    'bg-cap-gray text-cap-gray-lightest'
-                  }`}>
-                    {candidate.displayScore}
-                  </Badge>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Sección de KPIs */}
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-3xl font-black text-white">Dashboard de Reclutamiento</h2>
+          <h1 className="text-4xl font-black text-white">Dashboard de Reclutamiento</h1>
           <p className="text-cap-gray-lightest mt-2 text-lg font-semibold">
             Seguimiento de KPIs del proceso de contratación
           </p>
         </div>
+      </div>
 
         {/* KPI Cards - 8 cards en 2 filas */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 md:gap-4 md:grid-cols-2 lg:grid-cols-4">
         <KPICard
           title="Total Procesos Solicitados"
           value={kpis.totalProcessesRequested}
@@ -579,24 +415,31 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Gráficos de Pastel - 3 gráficos */}
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
-        <PieChartCard
-          title="Vacantes por Departamento"
-          data={chartData.byDepartment}
-          colors={[COLORS.blue, COLORS.green, COLORS.orange, COLORS.purple, COLORS.red, COLORS.pink]}
-        />
-        <PieChartCard
-          title="Vacantes por Empresa"
-          data={chartData.byCompany}
-          colors={[COLORS.lightBlue, COLORS.lightGreen, COLORS.orange, COLORS.purple, COLORS.darkGreen]}
-        />
-        <PieChartCard
-          title="Recursos por Estado del Proceso"
-          data={chartData.byStatus}
-          colors={[COLORS.gray, COLORS.lightBlue, COLORS.yellow, COLORS.purple, COLORS.lightGreen, COLORS.darkGreen]}
-        />
-      </div>
+      {/* Gráficos de Pastel - 2 arriba, 1 abajo */}
+      <div className="space-y-4 md:space-y-6">
+        {/* Primera fila: 2 gráficos */}
+        <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-2">
+          <PieChartCard
+            title="Vacantes por Departamento"
+            data={chartData.byDepartment}
+            colors={[COLORS.blue, COLORS.green, COLORS.orange, COLORS.purple, COLORS.red, COLORS.pink]}
+          />
+          <PieChartCard
+            title="Vacantes por Empresa"
+            data={chartData.byCompany}
+            colors={[COLORS.lightBlue, COLORS.lightGreen, COLORS.orange, COLORS.purple, COLORS.darkGreen]}
+          />
+        </div>
+        {/* Segunda fila: 1 gráfico centrado */}
+        <div className="flex justify-center">
+          <div className="w-full max-w-2xl">
+            <PieChartCard
+              title="Recursos por Estado del Proceso"
+              data={chartData.byStatus}
+              colors={[COLORS.gray, COLORS.lightBlue, COLORS.yellow, COLORS.purple, COLORS.lightGreen, COLORS.darkGreen]}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

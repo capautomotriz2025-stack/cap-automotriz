@@ -33,6 +33,17 @@ export default function VacanciesPage() {
     fetchVacancies();
   }, []);
 
+  // Detectar filtro de URL para procesos activos
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const filter = urlParams.get('filter');
+      if (filter === 'active') {
+        // El filtro se aplicará en filteredVacancies
+      }
+    }
+  }, []);
+
   const fetchVacancies = async () => {
     try {
       const response = await axios.get('/api/vacancies');
@@ -103,17 +114,32 @@ export default function VacanciesPage() {
     }
   };
 
-  // Filtrar vacantes por búsqueda
+  // Filtrar vacantes por búsqueda y estado activo
   const filteredVacancies = useMemo(() => {
-    if (!searchTerm) return vacancies;
-    const search = searchTerm.toLowerCase();
-    return vacancies.filter(vacancy =>
-      vacancy.title?.toLowerCase().includes(search) ||
-      vacancy.department?.toLowerCase().includes(search) ||
-      vacancy.costCenter?.toLowerCase().includes(search) ||
-      vacancy.requiredProfession?.toLowerCase().includes(search) ||
-      vacancy.applicantName?.toLowerCase().includes(search)
-    );
+    let filtered = vacancies;
+    
+    // Filtrar por estado activo si viene en la URL
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const filter = urlParams.get('filter');
+      if (filter === 'active') {
+        filtered = filtered.filter(v => v.status === 'published' || v.status === 'draft');
+      }
+    }
+    
+    // Filtrar por búsqueda
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter(vacancy =>
+        vacancy.title?.toLowerCase().includes(search) ||
+        vacancy.department?.toLowerCase().includes(search) ||
+        vacancy.costCenter?.toLowerCase().includes(search) ||
+        vacancy.requiredProfession?.toLowerCase().includes(search) ||
+        vacancy.applicantName?.toLowerCase().includes(search)
+      );
+    }
+    
+    return filtered;
   }, [vacancies, searchTerm]);
 
   // Paginación
@@ -213,7 +239,7 @@ export default function VacanciesPage() {
                     <th className="px-4 py-3 text-left text-sm font-black text-white">SLA</th>
                     <th className="px-4 py-3 text-left text-sm font-black text-white">Nivel de Evaluación</th>
                     <th className="px-4 py-3 text-left text-sm font-black text-white">Descriptor de Puesto</th>
-                    <th className="px-4 py-3 text-left text-sm font-black text-white">Tiempo CV</th>
+                    <th className="px-4 py-3 text-left text-sm font-black text-white">Asignar tiempo al proceso</th>
                     <th className="px-4 py-3 text-left text-sm font-black text-white">Proceso Aprobado</th>
                     <th className="px-4 py-3 text-left text-sm font-black text-white">Comentarios</th>
                     <th className="px-4 py-3 text-left text-sm font-black text-white">Acciones</th>
@@ -286,7 +312,7 @@ export default function VacanciesPage() {
                               className="mt-1 border-2 border-cap-gray text-cap-red hover:border-cap-red hover:text-cap-red font-bold transition-all text-xs"
                             >
                               <RefreshCw className="w-3 h-3 mr-1" />
-                              Actualizar
+                              Asignar tiempo al proceso
                             </Button>
                           </div>
                         </td>
@@ -409,7 +435,7 @@ export default function VacanciesPage() {
                                 <Clock className="w-4 h-4 text-cap-gray" />
                               </div>
                               <div className="flex-1">
-                                <span className="font-bold">Tiempo CV: {vacancy.timecv}</span>
+                                <span className="font-bold">Asignar tiempo al proceso: {vacancy.timecv}</span>
                                 {vacancy.timecvExpiresAt && (
                                   <span className="text-xs text-cap-gray block">
                                     Expira: {new Date(vacancy.timecvExpiresAt).toLocaleDateString('es-MX')}
@@ -450,7 +476,7 @@ export default function VacanciesPage() {
                             className="w-full border-2 border-cap-gray text-cap-red hover:border-cap-red hover:text-cap-red font-bold transition-all"
                           >
                             <RefreshCw className="w-4 h-4 mr-2" />
-                            Actualizar Tiempo CV
+                            Asignar tiempo al proceso
                           </Button>
                         </div>
                       </CardContent>
@@ -536,7 +562,7 @@ export default function VacanciesPage() {
                 <Clock className="w-6 h-6 text-cap-blue" />
               </div>
               <DialogTitle className="text-2xl font-black text-white">
-                Actualizar Tiempo de Recepción de CVs
+                Asignar tiempo al proceso
               </DialogTitle>
             </div>
             <DialogDescription className="text-cap-gray-lightest font-semibold text-base mt-4">

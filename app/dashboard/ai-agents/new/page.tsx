@@ -59,7 +59,6 @@ export default function NewAIAgentPage() {
   const [newRequiredSkill, setNewRequiredSkill] = useState('');
   const [newDesiredSkill, setNewDesiredSkill] = useState('');
   const [newCertification, setNewCertification] = useState('');
-  const [newSoftSkill, setNewSoftSkill] = useState('');
   const [advancedMode, setAdvancedMode] = useState(false);
   const [manualPrompt, setManualPrompt] = useState('');
 
@@ -139,7 +138,7 @@ export default function NewAIAgentPage() {
     setFormData({ ...formData, criteria: newCriteria });
   };
 
-  const addSkill = (type: 'required' | 'desired' | 'certification' | 'soft') => {
+  const addSkill = (type: 'required' | 'desired' | 'certification') => {
     if (type === 'required' && newRequiredSkill.trim()) {
       const newCriteria = { ...formData.criteria };
       newCriteria.technicalSkills.required.push(newRequiredSkill.trim());
@@ -156,15 +155,10 @@ export default function NewAIAgentPage() {
       newCriteria.technicalSkills.certifications.push(newCertification.trim());
       setFormData({ ...formData, criteria: newCriteria });
       setNewCertification('');
-    } else if (type === 'soft' && newSoftSkill.trim()) {
-      const newCriteria = { ...formData.criteria };
-      newCriteria.softSkills.keySkills.push(newSoftSkill.trim());
-      setFormData({ ...formData, criteria: newCriteria });
-      setNewSoftSkill('');
     }
   };
 
-  const removeSkill = (type: 'required' | 'desired' | 'certification' | 'soft', index: number) => {
+  const removeSkill = (type: 'required' | 'desired' | 'certification', index: number) => {
     const newCriteria = { ...formData.criteria };
     if (type === 'required') {
       newCriteria.technicalSkills.required.splice(index, 1);
@@ -172,24 +166,21 @@ export default function NewAIAgentPage() {
       newCriteria.technicalSkills.desired.splice(index, 1);
     } else if (type === 'certification') {
       newCriteria.technicalSkills.certifications?.splice(index, 1);
-    } else if (type === 'soft') {
-      newCriteria.softSkills.keySkills.splice(index, 1);
     }
     setFormData({ ...formData, criteria: newCriteria });
   };
 
-  const totalWeight = 
-    formData.criteria.experience.weight +
-    formData.criteria.technicalSkills.weight +
-    formData.criteria.education.weight +
-    formData.criteria.softSkills.weight +
-    formData.criteria.progression.weight;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (totalWeight !== 100) {
-      alert('La suma de los pesos debe ser exactamente 100%');
+    // Validar que los pesos sumen 100% (solo experiencia, educación y habilidades técnicas)
+    const calculatedWeight = 
+      formData.criteria.experience.weight +
+      formData.criteria.technicalSkills.weight +
+      formData.criteria.education.weight;
+    
+    if (calculatedWeight !== 100) {
+      alert('La suma de los pesos (Experiencia Laboral + Nivel Educativo + Habilidades Técnicas) debe ser exactamente 100%');
       return;
     }
 
@@ -354,20 +345,92 @@ export default function NewAIAgentPage() {
                 <CardDescription>Configura los pesos de cada criterio (total debe sumar 100%)</CardDescription>
               </div>
               <div className="text-right">
-                <div className={`text-2xl font-bold ${totalWeight === 100 ? 'text-green-600' : 'text-red-600'}`}>
-                  {totalWeight}%
+                <div className={`text-2xl font-bold ${(formData.criteria.experience.weight + formData.criteria.technicalSkills.weight + formData.criteria.education.weight) === 100 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formData.criteria.experience.weight + formData.criteria.technicalSkills.weight + formData.criteria.education.weight}%
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {totalWeight === 100 ? '✓ Perfecto' : '✗ Debe sumar 100%'}
+                  {(formData.criteria.experience.weight + formData.criteria.technicalSkills.weight + formData.criteria.education.weight) === 100 ? '✓ Perfecto' : '✗ Debe sumar 100%'}
                 </div>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Experiencia */}
+            {/* Profesión */}
             <div className="p-4 border rounded-lg space-y-4">
               <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">1. Experiencia Laboral</Label>
+                <Label className="text-base font-semibold">1. Profesión</Label>
+              </div>
+              <div className="space-y-2">
+                <Input
+                  placeholder="ej. Ingeniería en Sistemas, Administración de Empresas..."
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Especifica las profesiones requeridas para el puesto
+                </p>
+              </div>
+            </div>
+
+            {/* Nivel Educativo */}
+            <div className="p-4 border rounded-lg space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold">2. Nivel Educativo</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    className="w-20 text-center"
+                    value={formData.criteria.education.weight}
+                    onChange={(e) => handleWeightChange('education', parseInt(e.target.value) || 0)}
+                  />
+                  <span className="text-sm font-medium">%</span>
+                </div>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="eduLevel">Nivel Mínimo</Label>
+                  <select
+                    id="eduLevel"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={formData.criteria.education.minLevel}
+                    onChange={(e) => {
+                      const newCriteria = { ...formData.criteria };
+                      newCriteria.education.minLevel = e.target.value as any;
+                      setFormData({ ...formData, criteria: newCriteria });
+                    }}
+                  >
+                    <option value="none">Sin requisito</option>
+                    <option value="high-school">Preparatoria</option>
+                    <option value="bachelor">Licenciatura</option>
+                    <option value="master">Maestría</option>
+                    <option value="phd">Doctorado</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="eduRequired">¿Es obligatorio?</Label>
+                  <select
+                    id="eduRequired"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={formData.criteria.education.required ? 'true' : 'false'}
+                    onChange={(e) => {
+                      const newCriteria = { ...formData.criteria };
+                      newCriteria.education.required = e.target.value === 'true';
+                      setFormData({ ...formData, criteria: newCriteria });
+                    }}
+                  >
+                    <option value="false">No (Deseable)</option>
+                    <option value="true">Sí (Obligatorio)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Experiencia Laboral */}
+            <div className="p-4 border rounded-lg space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold">3. Experiencia Laboral</Label>
                 <div className="flex items-center gap-2">
                   <Input
                     type="number"
@@ -418,7 +481,7 @@ export default function NewAIAgentPage() {
             {/* Habilidades Técnicas */}
             <div className="p-4 border rounded-lg space-y-4">
               <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">2. Habilidades Técnicas</Label>
+                <Label className="text-base font-semibold">4. Habilidades Técnicas</Label>
                 <div className="flex items-center gap-2">
                   <Input
                     type="number"
@@ -513,124 +576,6 @@ export default function NewAIAgentPage() {
               </div>
             </div>
 
-            {/* Educación */}
-            <div className="p-4 border rounded-lg space-y-4">
-              <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">3. Educación</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    className="w-20 text-center"
-                    value={formData.criteria.education.weight}
-                    onChange={(e) => handleWeightChange('education', parseInt(e.target.value) || 0)}
-                  />
-                  <span className="text-sm font-medium">%</span>
-                </div>
-              </div>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="eduLevel">Nivel Mínimo</Label>
-                  <select
-                    id="eduLevel"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={formData.criteria.education.minLevel}
-                    onChange={(e) => {
-                      const newCriteria = { ...formData.criteria };
-                      newCriteria.education.minLevel = e.target.value as any;
-                      setFormData({ ...formData, criteria: newCriteria });
-                    }}
-                  >
-                    <option value="none">Sin requisito</option>
-                    <option value="high-school">Preparatoria</option>
-                    <option value="bachelor">Licenciatura</option>
-                    <option value="master">Maestría</option>
-                    <option value="phd">Doctorado</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="eduRequired">¿Es obligatorio?</Label>
-                  <select
-                    id="eduRequired"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={formData.criteria.education.required ? 'true' : 'false'}
-                    onChange={(e) => {
-                      const newCriteria = { ...formData.criteria };
-                      newCriteria.education.required = e.target.value === 'true';
-                      setFormData({ ...formData, criteria: newCriteria });
-                    }}
-                  >
-                    <option value="false">No (Deseable)</option>
-                    <option value="true">Sí (Obligatorio)</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Soft Skills */}
-            <div className="p-4 border rounded-lg space-y-4">
-              <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">4. Habilidades Blandas</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    className="w-20 text-center"
-                    value={formData.criteria.softSkills.weight}
-                    onChange={(e) => handleWeightChange('softSkills', parseInt(e.target.value) || 0)}
-                  />
-                  <span className="text-sm font-medium">%</span>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Habilidades Clave</Label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="ej. Liderazgo, Comunicación, Trabajo en equipo..."
-                    value={newSoftSkill}
-                    onChange={(e) => setNewSoftSkill(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill('soft'))}
-                  />
-                  <Button type="button" size="icon" onClick={() => addSkill('soft')}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {formData.criteria.softSkills.keySkills.map((skill, i) => (
-                    <Badge key={i} variant="secondary" className="gap-1">
-                      {skill}
-                      <X
-                        className="h-3 w-3 cursor-pointer"
-                        onClick={() => removeSkill('soft', i)}
-                      />
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Progresión Profesional */}
-            <div className="p-4 border rounded-lg space-y-4">
-              <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">5. Progresión Profesional</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    className="w-20 text-center"
-                    value={formData.criteria.progression.weight}
-                    onChange={(e) => handleWeightChange('progression', parseInt(e.target.value) || 0)}
-                  />
-                  <span className="text-sm font-medium">%</span>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Evalúa el crecimiento constante en roles anteriores, estabilidad laboral y logros medibles.
-              </p>
-            </div>
           </CardContent>
         </Card>
 
@@ -815,7 +760,7 @@ export default function NewAIAgentPage() {
           <Button 
             type="submit" 
             size="lg"
-            disabled={loading || totalWeight !== 100}
+            disabled={loading || (formData.criteria.experience.weight + formData.criteria.technicalSkills.weight + formData.criteria.education.weight) !== 100}
             className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
           >
             {loading ? (

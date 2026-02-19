@@ -552,7 +552,7 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
             </div>
 
             <div className="space-y-4">
-              <Label>Describa las Áreas que Desea Evaluar al Recurso</Label>
+              <Label>Habilidades técnicas que desea evaluar</Label>
               {formData.evaluationAreas.map((area, index) => (
                 <div key={index} className="flex gap-2 items-center">
                   <div className="flex-1">
@@ -726,7 +726,15 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="aiAgent">Agente de IA</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="aiAgent">Agente de IA</Label>
+                <Link href="/dashboard/ai-agents/new">
+                  <Button type="button" variant="outline" size="sm" className="text-purple-600 border-purple-300 hover:bg-purple-50">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Crear agente
+                  </Button>
+                </Link>
+              </div>
               <select
                 id="aiAgent"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
