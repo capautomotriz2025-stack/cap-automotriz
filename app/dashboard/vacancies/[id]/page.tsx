@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import Link from 'next/link';
 
 export default function EditVacancyPage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [agents, setAgents] = useState<any[]>([]);
@@ -125,7 +126,7 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
             : '',
           timecv: vacancy.timecv || '',
           status: vacancy.status || 'draft',
-          aiAgentId: vacancy.aiAgentId || ''
+          aiAgentId: searchParams.get('agentId') || vacancy.aiAgentId || ''
         });
       }
     } catch (error) {
@@ -728,10 +729,10 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="aiAgent">Agente de IA</Label>
-                <Link href="/dashboard/ai-agents/new">
+                <Link href={`/dashboard/ai-agents/new?vacancyId=${params.id}`}>
                   <Button type="button" variant="outline" size="sm" className="text-purple-600 border-purple-300 hover:bg-purple-50">
                     <Plus className="h-4 w-4 mr-1" />
-                    Crear agente
+                    Crear Agente
                   </Button>
                 </Link>
               </div>

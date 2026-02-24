@@ -29,6 +29,11 @@ export default function RequestsPage() {
     company: '', // Empresa
     contractType: '', // Tipo de contrato
     location: '', // Ubicación
+    educationLevel: '',
+    requiredProfessions: ['', '', ''] as string[],
+    preferredProfession: '',
+    experienceYearsMin: '',
+    experienceYearsMax: '',
     evaluationAreas: [
       { area: '', percentage: '' },
       { area: '', percentage: '' },
@@ -120,6 +125,13 @@ export default function RequestsPage() {
         contractType: formData.contractType || undefined,
         location: formData.location || 'Por definir', // Valor temporal, se completará en Vacantes
         // Criterios de evaluación
+        educationLevel: formData.educationLevel || undefined,
+        requiredProfessions: formData.requiredProfessions.filter(p => p.trim() !== ''),
+        preferredProfession: formData.preferredProfession || undefined,
+        experienceYearsMin: formData.experienceYearsMin ? parseInt(formData.experienceYearsMin) || 0 : 0,
+        experienceYearsMax: formData.experienceYearsMax ? parseInt(formData.experienceYearsMax) || 0 : 0,
+        requiredProfession: formData.requiredProfessions[0] || '',
+        experienceYears: formData.experienceYearsMin ? parseInt(formData.experienceYearsMin) || 0 : 0,
         evaluationAreas: formData.evaluationAreas
           .filter(area => area.area.trim() !== '')
           .map(area => ({
@@ -127,16 +139,11 @@ export default function RequestsPage() {
             percentage: parseFloat(area.percentage) || 0
           })),
         jobDescriptorFile: jobDescriptorUrl || undefined,
-        // Campos mínimos requeridos por el modelo (valores por defecto)
-        // evaluationLevel se completará en Vacantes (opcional)
         salary: {
           min: 0,
           max: 0,
           currency: 'MXN'
         },
-        // Mantener compatibilidad con campos legacy
-        requiredProfession: '', // Se completará en Vacantes
-        experienceYears: 0, // Se completará en Vacantes
         employmentType: 'full-time' as const,
         status: 'pending' as const, // Estado especial para solicitudes pendientes
       };
@@ -344,6 +351,77 @@ export default function RequestsPage() {
             {/* Criterios de Evaluación */}
             <div className="space-y-4 pt-4 border-t border-cap-gray">
               <Label className="text-base font-semibold">Criterios de Evaluación</Label>
+
+              <div className="space-y-2">
+                <Label htmlFor="educationLevel">Nivel educativo requerido</Label>
+                <select
+                  id="educationLevel"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={formData.educationLevel}
+                  onChange={(e) => setFormData({ ...formData, educationLevel: e.target.value })}
+                >
+                  <option value="">Seleccione...</option>
+                  <option value="Secundaria">Secundaria</option>
+                  <option value="Universitaria">Universitaria</option>
+                  <option value="Estudiante universitario">Estudiante universitario</option>
+                  <option value="Técnico">Técnico</option>
+                  <option value="Master (Con Maestría)">Master (Con Maestría)</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Profesiones requeridas</Label>
+                <div className="grid md:grid-cols-3 gap-4">
+                  {formData.requiredProfessions.map((profession, index) => (
+                    <Input
+                      key={index}
+                      placeholder={`Profesión ${index + 1}`}
+                      value={profession}
+                      onChange={(e) => {
+                        const newProfessions = [...formData.requiredProfessions];
+                        newProfessions[index] = e.target.value;
+                        setFormData({ ...formData, requiredProfessions: newProfessions });
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="preferredProfession">Profesión preferible</Label>
+                <Input
+                  id="preferredProfession"
+                  placeholder="ej. Ingeniería en Sistemas"
+                  value={formData.preferredProfession}
+                  onChange={(e) => setFormData({ ...formData, preferredProfession: e.target.value })}
+                />
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="experienceYearsMin">Años de experiencia mínimo</Label>
+                  <Input
+                    id="experienceYearsMin"
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={formData.experienceYearsMin}
+                    onChange={(e) => setFormData({ ...formData, experienceYearsMin: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="experienceYearsMax">Años de experiencia máximo</Label>
+                  <Input
+                    id="experienceYearsMax"
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={formData.experienceYearsMax}
+                    onChange={(e) => setFormData({ ...formData, experienceYearsMax: e.target.value })}
+                  />
+                </div>
+              </div>
+
               <div className="space-y-4">
                 <Label className="text-sm">Habilidades técnicas que desea evaluar</Label>
                 {formData.evaluationAreas.map((area, index) => (

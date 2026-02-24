@@ -84,10 +84,13 @@ export async function PUT(
     
     // Obtener el candidato antes de actualizar
     oldCandidate = await Candidate.findById(params.id).populate('vacancyId');
-    
+    const updateData: Record<string, unknown> = { ...body };
+    if (body.status === 'hired' && !oldCandidate?.hiredAt) {
+      updateData.hiredAt = new Date();
+    }
     const candidate = await Candidate.findByIdAndUpdate(
       params.id,
-      body,
+      updateData,
       { new: true, runValidators: true }
     ).populate('vacancyId');
     

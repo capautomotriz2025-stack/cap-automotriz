@@ -15,7 +15,8 @@ export interface ICandidate extends Document {
   
   // Estado del proceso
   status: 'applied' | 'screening' | 'interview' | 'evaluation' | 'interview-boss' | 'offer' | 'hired' | 'rejected' | 'declined';
-  
+  hiredAt?: Date; // Fecha en que pasó a estado contratado (para Time to Hire/Fill)
+
   // Control de duplicados
   previousApplications?: Array<{
     vacancyId: string;
@@ -84,7 +85,8 @@ const CandidateSchema = new Schema<ICandidate>({
     enum: ['applied', 'screening', 'interview', 'evaluation', 'interview-boss', 'offer', 'hired', 'rejected', 'declined'],
     default: 'applied'
   },
-  
+  hiredAt: { type: Date },
+
   previousApplications: [{
     vacancyId: { type: String, required: true },
     appliedAt: { type: Date, required: true },

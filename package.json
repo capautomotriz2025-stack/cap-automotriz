@@ -9,7 +9,8 @@
     "lint": "next lint",
     "seed": "tsx scripts/seed.ts",
     "seed-users": "tsx scripts/seed-users.ts",
-    "test-formularios": "tsx scripts/test-formularios.ts"
+    "test-formularios": "tsx scripts/test-formularios.ts",
+    "e2e-test-7": "tsx scripts/e2e-test-7.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",
@@ -59,6 +60,7 @@
     "autoprefixer": "^10.4.16",
     "eslint": "^8.55.0",
     "eslint-config-next": "^14.2.0",
+    "form-data": "^4.0.5",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",

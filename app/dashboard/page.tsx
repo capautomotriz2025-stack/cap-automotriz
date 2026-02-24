@@ -190,26 +190,34 @@ export default function DashboardPage() {
           ? (totalProcessesClosed / totalProcessesRequested) * 100 
           : 0;
 
-        // Calcular Time to Hire (promedio de días desde aplicación hasta contratación)
-        const hiredWithDates = hiredCandidates.filter((c: any) => c.createdAt && c.updatedAt);
+        // Calcular Time to Hire (días desde creación del candidato hasta estado Contratado; usar hiredAt si existe)
+        const hiredWithDates = hiredCandidates.filter((c: any) => c.createdAt && (c.hiredAt || c.updatedAt));
         const timeToHireDays = hiredWithDates.length > 0
           ? hiredWithDates.reduce((sum: number, c: any) => {
               const appliedDate = new Date(c.createdAt);
-              const hiredDate = new Date(c.updatedAt);
+              const hiredDate = new Date(c.hiredAt || c.updatedAt);
               const days = Math.floor((hiredDate.getTime() - appliedDate.getTime()) / (1000 * 60 * 60 * 24));
               return sum + days;
             }, 0) / hiredWithDates.length
           : 0;
 
-        // Calcular Time to Fill (promedio de días desde creación de vacante hasta cierre)
-        const filledVacancies = closedVacancies.filter((v: any) => v.createdAt && v.closedAt);
-        const timeToFillDays = filledVacancies.length > 0
-          ? filledVacancies.reduce((sum: number, v: any) => {
-              const createdDate = new Date(v.createdAt);
-              const closedDate = new Date(v.closedAt || v.updatedAt);
-              const days = Math.floor((closedDate.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
-              return sum + days;
-            }, 0) / filledVacancies.length
+        // Calcular Time to Fill (desde creación de vacante hasta que algún candidato pasa a Contratado)
+        const vacancyIdsWithHired = [...new Set(hiredCandidates.map((c: any) => c.vacancyId?._id || c.vacancyId).filter(Boolean))];
+        const vacanciesById = Object.fromEntries((vacancies as any[]).map((v: any) => [v._id.toString(), v]));
+        const timeToFillPerVacancy: number[] = [];
+        vacancyIdsWithHired.forEach((vid: any) => {
+          const vacancy = vacanciesById[vid?.toString?.() || vid];
+          if (!vacancy?.createdAt) return;
+          const hiredForVacancy = hiredCandidates.filter((c: any) => (c.vacancyId?._id || c.vacancyId)?.toString() === (vid?.toString?.() || vid));
+          if (hiredForVacancy.length === 0) return;
+          const firstHiredDate = new Date(
+            Math.min(...hiredForVacancy.map((c: any) => new Date(c.hiredAt || c.updatedAt).getTime()))
+          );
+          const days = Math.floor((firstHiredDate.getTime() - new Date(vacancy.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+          timeToFillPerVacancy.push(days);
+        });
+        const timeToFillDays = timeToFillPerVacancy.length > 0
+          ? timeToFillPerVacancy.reduce((a, b) => a + b, 0) / timeToFillPerVacancy.length
           : 0;
 
         // Calcular Tasa de Abandono (candidatos que declinaron)
@@ -218,13 +226,10 @@ export default function DashboardPage() {
           ? (declinedCandidates.length / candidates.length) * 100
           : 0;
 
-        // Calcular Tasa de Propuestas Rechazadas (candidatos en oferta que fueron rechazados o declinaron)
-        const offeredCandidates = candidates.filter((c: any) => c.status === 'offer');
-        const rejectedAfterOffer = offeredCandidates.filter((c: any) => 
-          c.status === 'rejected' || c.status === 'declined'
-        );
-        const rejectedOfferRate = offeredCandidates.length > 0
-          ? (rejectedAfterOffer.length / offeredCandidates.length) * 100
+        // Tasa de rechazo / Oferta no aceptada: candidatos en estado Rechazado
+        const rejectedCandidates = candidates.filter((c: any) => c.status === 'rejected');
+        const rejectedOfferRate = candidates.length > 0
+          ? (rejectedCandidates.length / candidates.length) * 100
           : 0;
 
         setKpis({
@@ -406,9 +411,9 @@ export default function DashboardPage() {
           isPositive={false} // Menos abandono es mejor
         />
         <KPICard
-          title="Tasa Propuestas Rechazadas"
+          title="Tasa de rechazo"
           value={`${kpis.rejectedOfferRate.toFixed(1)}%`}
-          subtitle="Ofertas no aceptadas"
+          subtitle="Oferta no aceptada"
           change={kpis.changeRejectedOfferRate}
           icon={XCircle}
           isPositive={false} // Menos rechazos es mejor

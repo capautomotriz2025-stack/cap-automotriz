@@ -4,11 +4,13 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import KanbanBoard from '@/components/kanban/KanbanBoard';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { RefreshCw, Search } from 'lucide-react';
 
 export default function KanbanPage() {
   const [candidates, setCandidates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchCandidates();
@@ -59,30 +61,53 @@ export default function KanbanPage() {
     );
   }
 
+  const filteredCandidates = searchTerm.trim()
+    ? candidates.filter((c) => {
+        const v = c.vacancyId;
+        const title = (v && v.title) || '';
+        const dept = (v && v.department) || '';
+        const term = searchTerm.toLowerCase();
+        return title.toLowerCase().includes(term) || dept.toLowerCase().includes(term);
+      })
+    : candidates;
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <div>
           <h1 className="text-3xl font-black text-white">Tablero Kanban</h1>
           <p className="text-cap-gray-lightest mt-2 font-semibold">
             Arrastra y suelta candidatos para actualizar su estado
           </p>
         </div>
-        <Button variant="outline" onClick={fetchCandidates} className="border-cap-gray text-cap-gray-lightest hover:border-cap-red hover:text-cap-red font-bold">
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Actualizar
-        </Button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por plaza o departamento..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 bg-background border-cap-gray text-cap-gray-lightest"
+            />
+          </div>
+          <Button variant="outline" onClick={fetchCandidates} className="border-cap-gray text-cap-gray-lightest hover:border-cap-red hover:text-cap-red font-bold shrink-0">
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Actualizar
+          </Button>
+        </div>
       </div>
 
       {/* Kanban Board */}
-      {candidates.length === 0 ? (
+      {filteredCandidates.length === 0 ? (
         <div className="text-center py-16 text-gray-500">
-          No hay candidatos para mostrar
+          {candidates.length === 0
+            ? 'No hay candidatos para mostrar'
+            : 'Ningún candidato coincide con la búsqueda'}
         </div>
       ) : (
         <KanbanBoard
-          candidates={candidates}
+          candidates={filteredCandidates}
           onUpdateStatus={handleUpdateStatus}
         />
       )}

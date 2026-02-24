@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,9 +13,20 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Bot, Sparkles, Save, Info, Plus, X, Eye, Edit2, Check } from 'lucide-react';
 import { generateSystemPrompt } from '@/lib/prompt-generator';
 
+const educationLevelToMinLevel: Record<string, 'none' | 'high-school' | 'bachelor' | 'master' | 'phd'> = {
+  'Secundaria': 'high-school',
+  'Universitaria': 'bachelor',
+  'Estudiante universitario': 'bachelor',
+  'Técnico': 'high-school',
+  'Master (Con Maestría)': 'master',
+};
+
 export default function NewAIAgentPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const vacancyId = searchParams.get('vacancyId');
   const [loading, setLoading] = useState(false);
+  const [loadingVacancy, setLoadingVacancy] = useState(!!vacancyId);
   const [templates, setTemplates] = useState<any[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   
@@ -98,6 +109,68 @@ export default function NewAIAgentPage() {
       setManualPrompt(generatedPrompt);
     }
   }, []);
+
+  // Pre-llenar desde vacante cuando se llega con ?vacancyId=...
+  useEffect(() => {
+    if (!vacancyId) {
+      setLoadingVacancy(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await axios.get(`/api/vacancies/${vacancyId}`);
+        if (!res.data.success || cancelled) return;
+        const v = res.data.data;
+        const name = v.title ? `Agente - ${v.title}` : '';
+        const descParts = [v.mainFunctions || ''];
+        if (v.requiredProfessions?.length) {
+          descParts.push(`Profesiones requeridas: ${v.requiredProfessions.filter(Boolean).join(', ')}.`);
+        }
+        if (v.preferredProfession) descParts.push(`Preferible: ${v.preferredProfession}.`);
+        if (v.experienceYearsMin != null || v.experienceYearsMax != null) {
+          descParts.push(`Años de experiencia: ${v.experienceYearsMin ?? 0} - ${v.experienceYearsMax ?? 'N/A'}.`);
+        }
+        const description = descParts.filter(Boolean).join(' ');
+        const requiredSkills = Array.isArray(v.requiredSkills) ? v.requiredSkills : [];
+        const desiredSkills = Array.isArray(v.desiredSkills) ? v.desiredSkills : [];
+        if (v.evaluationAreas?.length) {
+          v.evaluationAreas.forEach((ea: { area?: string }) => {
+            if (ea.area?.trim() && !requiredSkills.includes(ea.area.trim())) {
+              requiredSkills.push(ea.area.trim());
+            }
+          });
+        }
+        setFormData((prev) => ({
+          ...prev,
+          name,
+          description,
+          criteria: {
+            ...prev.criteria,
+            experience: {
+              ...prev.criteria.experience,
+              minYears: typeof v.experienceYearsMin === 'number' ? v.experienceYearsMin : parseInt(String(v.experienceYearsMin), 10) || 0,
+            },
+            education: {
+              ...prev.criteria.education,
+              minLevel: educationLevelToMinLevel[v.educationLevel] || 'none',
+              required: !!v.educationLevel,
+            },
+            technicalSkills: {
+              ...prev.criteria.technicalSkills,
+              required: requiredSkills,
+              desired: desiredSkills,
+            },
+          },
+        }));
+      } catch (err) {
+        console.error('Error cargando vacante para pre-llenar agente:', err);
+      } finally {
+        if (!cancelled) setLoadingVacancy(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [vacancyId]);
 
   const fetchTemplates = async () => {
     try {
@@ -198,8 +271,14 @@ export default function NewAIAgentPage() {
       });
 
       if (response.data.success) {
-        alert('¡Agente de IA creado exitosamente!');
-        router.push('/dashboard/ai-agents');
+        const newAgentId = response.data.data?._id;
+        if (vacancyId && newAgentId) {
+          alert('¡Agente de IA creado! Serás redirigido a la vacante para asignarlo.');
+          router.push(`/dashboard/vacancies/${vacancyId}?agentId=${newAgentId}`);
+        } else {
+          alert('¡Agente de IA creado exitosamente!');
+          router.push('/dashboard/ai-agents');
+        }
       }
     } catch (error: any) {
       console.error('Error:', error);
@@ -209,11 +288,20 @@ export default function NewAIAgentPage() {
     }
   };
 
+  if (loadingVacancy) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4">
+        <div className="animate-spin rounded-full h-10 w-10 border-2 border-purple-500 border-t-transparent" />
+        <p className="text-cap-gray-lightest font-semibold">Cargando datos de la vacante...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href="/dashboard/ai-agents">
+        <Link href={vacancyId ? `/dashboard/vacancies/${vacancyId}` : '/dashboard/ai-agents'}>
           <Button variant="outline" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -221,7 +309,7 @@ export default function NewAIAgentPage() {
         <div>
           <h1 className="text-3xl font-black text-white">Nuevo Agente de IA</h1>
           <p className="text-cap-gray-lightest mt-1 font-semibold">
-            Crea un agente personalizado o parte de una plantilla
+            {vacancyId ? 'Crear agente desde la vacante (puedes editar los campos)' : 'Crea un agente personalizado o parte de una plantilla'}
           </p>
         </div>
       </div>
