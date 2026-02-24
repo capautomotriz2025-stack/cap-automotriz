@@ -7,9 +7,12 @@ export async function GET(request: NextRequest) {
   try {
     await connectDB();
     
-    const notifications = await Notification.find()
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    
+    const notifications = await Notification.find({ createdAt: { $gte: oneYearAgo } })
       .sort({ createdAt: -1 })
-      .limit(100)
+      .limit(200)
       .populate('relatedVacancyId', 'title')
       .populate('relatedCandidateId', 'fullName');
     

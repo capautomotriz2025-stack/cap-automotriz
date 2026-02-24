@@ -1,18 +1,19 @@
 /**
- * E2E Test 7 – Flujo completo: Solicitud → Agente → Vacante publicada → Aplicación (PDF) → Kanban → Mensajes
+ * E2E Test N – Flujo completo: Solicitud → Agente → Vacante → Aplicación → Kanban → Notificaciones
  *
- * 1. Crear solicitud "Solicitud test 7" (vacancy status: pending)
+ * 1. Crear solicitud "Solicitud test N" (vacancy status: pending)
  * 2. Crear agente de IA desde esa solicitud
- * 3. Completar vacante (published + aiAgentId)
+ * 3. Completar vacante (published + aiAgentId, applicationDeadline en el pasado para notificación)
  * 4. Aplicar con PDF (candidato)
  * 5. Avanzar candidato por estados Kanban (hasta hired)
- * 6. Verificar respuestas API y documentar mensajes
+ * 6. Llamar POST /api/notifications para crear aviso "tiempo de recepción de CVs finalizado"
+ * 7. Verificación
  *
  * Uso:
- *   npx tsx scripts/e2e-test-7.ts
+ *   npx tsx scripts/e2e-test-7.ts              (test 8 por defecto)
+ *   TEST_NUMBER=9 npx tsx scripts/e2e-test-7.ts
  *   BASE_URL=https://cap-automotriz.vercel.app npx tsx scripts/e2e-test-7.ts
  *   CV_PATH=/ruta/al/cv.pdf npx tsx scripts/e2e-test-7.ts
- *   npx tsx scripts/e2e-test-7.ts --cv=/ruta/al/cv.pdf
  */
 
 import axios, { AxiosInstance } from 'axios';
@@ -21,6 +22,9 @@ import * as path from 'path';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const API_BASE = `${BASE_URL}/api`;
+const TEST_NUMBER = process.env.TEST_NUMBER ? parseInt(process.env.TEST_NUMBER, 10) : 8;
+const TEST_NAME = `test ${TEST_NUMBER}`;
+const SOLICITUD_TITLE = `Solicitud ${TEST_NAME}`;
 
 const CV_PATH =
   process.env.CV_PATH ||
@@ -52,8 +56,8 @@ async function createMinimalPdfBuffer(): Promise<Buffer> {
     const doc = await PDFDocument.create();
     const page = doc.addPage([300, 400]);
     const font = await doc.embedFont('Helvetica');
-    page.drawText('CV Test 7 - E2E', { x: 50, y: 350, size: 14, font });
-    page.drawText('Candidato de prueba para flujo test 7.', { x: 50, y: 320, size: 10, font });
+    page.drawText(`CV ${TEST_NAME} - E2E`, { x: 50, y: 350, size: 14, font });
+    page.drawText(`Candidato de prueba para flujo ${TEST_NAME}.`, { x: 50, y: 320, size: 10, font });
     const pdfBytes = await doc.save();
     return Buffer.from(pdfBytes);
   } catch (e) {
@@ -76,20 +80,21 @@ async function main() {
   let agentId: string;
   let candidateId: string;
 
-  console.log('E2E Test 7 – Flujo completo (Solicitud → Vacante → Agente → Aplicación → Kanban)\n');
+  console.log(`E2E ${SOLICITUD_TITLE} – Flujo completo (Solicitud → Vacante → Agente → Aplicación → Kanban → Notificaciones)\n`);
   console.log('BASE_URL:', BASE_URL);
+  console.log('TEST_NUMBER:', TEST_NUMBER);
   if (CV_PATH) console.log('CV_PATH:', CV_PATH);
   console.log('');
 
   try {
-    // —— Paso 1: Crear solicitud "Solicitud test 7" ——
-    console.log('1. Creando solicitud "Solicitud test 7"...');
+    // —— Paso 1: Crear solicitud ——
+    console.log(`1. Creando solicitud "${SOLICITUD_TITLE}"...`);
     const solicitudPayload = {
-      applicantName: 'Solicitante Test 7',
+      applicantName: `Solicitante ${TEST_NAME}`,
       department: 'Tecnología',
-      costCenter: 'CC-TEST-007',
+      costCenter: `CC-TEST-${String(TEST_NUMBER).padStart(3, '0')}`,
       isNewPosition: true,
-      title: 'Solicitud test 7',
+      title: SOLICITUD_TITLE,
       numberOfPositions: 1,
       positionScale: 'escala-tres-especialistas',
       mainFunctions:
@@ -151,7 +156,7 @@ async function main() {
     }
 
     const agentPayload = {
-      name: `Agente - ${vacancy.title || 'Solicitud test 7'}`,
+      name: `Agente - ${vacancy.title || SOLICITUD_TITLE}`,
       category: 'otro',
       description,
       criteria: {
@@ -183,13 +188,16 @@ async function main() {
     agentId = agentRes.data.data._id;
     console.log('   Agente creado:', agentId);
 
-    // —— Paso 3: Completar vacante (published + aiAgentId) ——
+    // —— Paso 3: Completar vacante (published + aiAgentId + applicationDeadline en el pasado para notificación) ——
     console.log('\n3. Completando vacante (publicar y asignar agente)...');
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
     const completePayload = {
       ...vacancy,
       aiAgentId: agentId,
       status: 'published',
       publishedAt: new Date().toISOString(),
+      applicationDeadline: yesterday.toISOString(),
       educationLevel: vacancy.educationLevel || 'Universitaria',
       requiredProfessions: vacancy.requiredProfessions || [],
       preferredProfession: vacancy.preferredProfession || '',
@@ -204,7 +212,14 @@ async function main() {
 
     const putRes = await api.put(`/vacancies/${solicitudId}`, completePayload);
     if (!putRes.data.success) throw new Error('Error al completar vacante');
-    console.log('   Vacante publicada. Apply URL:', `${BASE_URL}/apply/${solicitudId}`);
+    console.log('   Vacante publicada (applicationDeadline ayer para generar notificación). Apply URL:', `${BASE_URL}/apply/${solicitudId}`);
+
+    // —— Paso 3b: Crear notificación "Tiempo de recepción de CVs finalizado" (vacante ya tiene fecha límite vencida)
+    console.log('   Creando notificación de CV recepción finalizado...');
+    const notifAfterVacancy = await api.post('/notifications').catch(() => ({ data: { success: false, data: [] } }));
+    if (notifAfterVacancy.data?.success && notifAfterVacancy.data?.data?.length > 0) {
+      console.log(`   Creadas ${notifAfterVacancy.data.data.length} notificación(es). Ver campanita y /dashboard/notifications`);
+    }
 
     // —— Paso 4: Aplicación (candidato con PDF) ——
     console.log('\n4. Enviando aplicación (candidato + CV)...');
@@ -221,10 +236,10 @@ async function main() {
     const FormData = require('form-data');
     const form = new FormData();
     form.append('vacancyId', solicitudId);
-    form.append('fullName', 'Candidato Test 7');
+    form.append('fullName', `Candidato ${TEST_NAME}`);
     form.append('email', 'luciano.mastran@gmail.com');
     form.append('phone', '+5215512345678');
-    form.append('cv', cvBuffer, { filename: 'cv-test-7.pdf', contentType: 'application/pdf' });
+    form.append('cv', cvBuffer, { filename: `cv-${TEST_NAME.replace(/\s/g, '-')}.pdf`, contentType: 'application/pdf' });
 
     const applicationRes = await api.post('/applications', form, {
       headers: form.getHeaders(),
@@ -246,18 +261,29 @@ async function main() {
     }
     console.log('   (Al pasar a hired se setea hiredAt para Time to Hire / Time to Fill.)');
 
-    // —— Paso 6: Verificación y documentación ——
-    console.log('\n6. Verificación');
+    // —— Paso 6: Crear notificación "tiempo de recepción de CVs finalizado" ——
+    console.log('\n6. Creando notificaciones de vacantes con tiempo de recepción de CVs finalizado...');
+    const notifRes = await api.post('/notifications');
+    if (notifRes.data.success && notifRes.data.data?.length > 0) {
+      console.log(`   Creadas ${notifRes.data.data.length} notificación(es). Ver en ${BASE_URL}/dashboard/notifications`);
+    } else {
+      console.log('   (Ninguna nueva o ya existían. Revisa /dashboard/notifications.)');
+    }
+
+    // —— Paso 7: Verificación y documentación ——
+    console.log('\n7. Verificación');
     console.log('   Todas las llamadas API devolvieron éxito.');
     console.log('\nMensajes enviados (revisar bandeja / logs según configuración):');
     console.log('   - Aplicación: confirmación al candidato (email y opcionalmente WhatsApp).');
     console.log('   - Cambios de estado: invitación a entrevista (interview), evaluación (evaluation), oferta (offer).');
+    console.log('   - Notificaciones: "Tiempo de recepción de CVs finalizado" en /dashboard/notifications');
     console.log('\n--- Resumen ---');
     console.log('Solicitud/Vacante ID:', solicitudId);
     console.log('Agente ID:', agentId);
     console.log('Candidato ID:', candidateId);
     console.log('Apply URL:', `${BASE_URL}/apply/${solicitudId}`);
-    console.log('\nE2E Test 7 completado correctamente.');
+    console.log('Notificaciones:', `${BASE_URL}/dashboard/notifications`);
+    console.log(`\nE2E ${SOLICITUD_TITLE} completado correctamente.`);
   } catch (error: any) {
     if (error.code === 'ECONNREFUSED') {
       console.error('Error: No se pudo conectar a', BASE_URL);

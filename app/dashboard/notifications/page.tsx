@@ -13,11 +13,18 @@ interface Notification {
   type: 'vacancy_deadline' | 'vacancy_closed' | 'candidate_applied' | 'system';
   title: string;
   message: string;
-  relatedVacancyId?: string;
-  relatedCandidateId?: string;
+  relatedVacancyId?: string | { _id: string; title?: string };
+  relatedCandidateId?: string | { _id: string; fullName?: string };
   read: boolean;
   readAt?: string;
   createdAt: string;
+}
+
+function getVacancyId(relatedVacancyId: Notification['relatedVacancyId']): string | null {
+  if (!relatedVacancyId) return null;
+  return typeof relatedVacancyId === 'object' && relatedVacancyId !== null && '_id' in relatedVacancyId
+    ? (relatedVacancyId as { _id: string })._id
+    : String(relatedVacancyId);
 }
 
 export default function NotificationsPage() {
@@ -34,6 +41,12 @@ export default function NotificationsPage() {
 
   const fetchNotifications = async () => {
     try {
+      // Crear notificaciones de "tiempo de recepción de CVs finalizado" para vacantes con fecha límite vencida
+      try {
+        await axios.post('/api/notifications');
+      } catch (_) {
+        // Ignorar si falla (ej. sin vacantes vencidas)
+      }
       const response = await axios.get('/api/notifications');
       if (response.data.success) {
         setNotifications(response.data.data);
@@ -126,6 +139,9 @@ export default function NotificationsPage() {
           <p className="text-cap-gray-lightest mt-2 font-semibold">
             {unreadCount > 0 ? `${unreadCount} notificación${unreadCount > 1 ? 'es' : ''} sin leer` : 'Todas las notificaciones leídas'}
           </p>
+          <p className="text-cap-gray mt-1 text-sm">
+            Se muestran las del último año. Puedes borrarlas para no acumular.
+          </p>
         </div>
         {unreadNotifications.length > 0 && (
           <Button
@@ -171,8 +187,8 @@ export default function NotificationsPage() {
                             minute: '2-digit'
                           })}
                         </Badge>
-                        {notification.relatedVacancyId && (
-                          <Link href={`/dashboard/vacancies/${notification.relatedVacancyId}`}>
+                        {getVacancyId(notification.relatedVacancyId) && (
+                          <Link href={`/dashboard/vacancies/${getVacancyId(notification.relatedVacancyId)}`}>
                             <Button variant="outline" size="sm" className="text-xs border-2 border-cap-gray text-cap-red hover:border-cap-red hover:text-cap-red font-bold">
                               Ver Vacante
                             </Button>
@@ -239,8 +255,8 @@ export default function NotificationsPage() {
                             minute: '2-digit'
                           })}
                         </Badge>
-                        {notification.relatedVacancyId && (
-                          <Link href={`/dashboard/vacancies/${notification.relatedVacancyId}`}>
+                        {getVacancyId(notification.relatedVacancyId) && (
+                          <Link href={`/dashboard/vacancies/${getVacancyId(notification.relatedVacancyId)}`}>
                             <Button variant="outline" size="sm" className="text-xs border-2 border-cap-gray text-cap-gray hover:border-cap-red hover:text-cap-red font-bold">
                               Ver Vacante
                             </Button>
