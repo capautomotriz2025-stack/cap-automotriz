@@ -189,25 +189,20 @@ export async function POST(request: NextRequest) {
         aiAgent
       );
       
-      // 🔧 MAPEAR clasificaciones de inglés a español para MongoDB
-      const classificationMap: Record<string, 'ideal' | 'potencial' | 'no perfila'> = {
-        'ideal': 'ideal',
-        'potential': 'potencial',
-        'no-fit': 'no perfila',
-        'no fit': 'no perfila'  // por si viene con espacio
-      };
-      
-      // Convertir clasificación si es necesario
-      const originalClassification = aiAnalysis.classification;
-      if (originalClassification in classificationMap) {
-        mappedClassification = classificationMap[originalClassification];
-      } else {
-        // Fallback si viene algo inesperado
-        console.log('⚠️ Clasificación inesperada:', originalClassification, '- usando fallback');
+      // Umbrales efectivos: vacante tiene prioridad sobre agente
+      const effectiveThresholds = ((vacancy as any).thresholds ?? aiAgent?.thresholds) || { ideal: 80, potential: 65, review: 50 };
+      const score = aiAnalysis.score ?? 50;
+      if (score >= effectiveThresholds.ideal) {
+        mappedClassification = 'ideal';
+      } else if (score >= effectiveThresholds.potential) {
         mappedClassification = 'potencial';
+      } else if (score >= effectiveThresholds.review) {
+        mappedClassification = 'potencial';
+      } else {
+        mappedClassification = 'no perfila';
       }
-      
-      console.log('🤖 Análisis IA completado - Score:', aiAnalysis.score, 'Clasificación:', mappedClassification);
+
+      console.log('🤖 Análisis IA completado - Score:', score, 'Clasificación:', mappedClassification, '(umbrales vacante/agente)');
       
     } catch (error) {
       console.error('⚠️  Error analizando CV (requiere OPENAI_API_KEY):', error);

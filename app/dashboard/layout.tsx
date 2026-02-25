@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -36,6 +36,7 @@ const baseNavigation = [
   { name: 'Agentes IA', href: '/dashboard/ai-agents', icon: Bot, badge: 'IA', role: null },
   { name: 'Usuarios', href: '/dashboard/users', icon: UserCog, badge: 'Admin', role: 'superadmin' },
   { name: 'Notificaciones', href: '/dashboard/notifications', icon: Bell, badge: null, role: null },
+  { name: 'BD Candidatos', href: '/dashboard/cvs-by-process', icon: FileText, badge: null, role: null },
 ];
 
 export default function DashboardLayout({
@@ -44,14 +45,30 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { data: session, status } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
 
-  // Filtrar navegación según rol
-  const navigation = baseNavigation.filter(item => 
-    !item.role || (session?.user?.role === item.role)
-  );
+  // Manager solo puede acceder a Solicitudes y Kanban; redirigir si intenta otra ruta
+  useEffect(() => {
+    if (status !== 'authenticated' || session?.user?.role !== 'manager') return;
+    if (pathname !== '/dashboard/requests' && pathname !== '/dashboard/kanban') {
+      router.replace('/dashboard/requests');
+    }
+  }, [status, session?.user?.role, pathname, router]);
+
+  // Filtrar navegación según rol: manager solo Solicitudes y Kanban; admin/user todo excepto Usuarios; superadmin todo
+  const navigation = (() => {
+    const role = session?.user?.role;
+    if (role === 'manager') {
+      return baseNavigation.filter(item => item.href === '/dashboard/requests' || item.href === '/dashboard/kanban');
+    }
+    if (role === 'admin' || role === 'user') {
+      return baseNavigation.filter(item => !item.role || item.role !== 'superadmin');
+    }
+    return baseNavigation;
+  })();
 
   // Obtener conteo de notificaciones no leídas
   useEffect(() => {
@@ -220,7 +237,7 @@ export default function DashboardLayout({
                   {session?.user?.name || session?.user?.email || 'Usuario'}
                 </p>
                 <p className="text-xs text-cap-gray truncate">
-                  {session?.user?.role === 'superadmin' ? 'Superadmin' : session?.user?.role === 'admin' ? 'Administrador' : 'Usuario'}
+                  {session?.user?.role === 'superadmin' ? 'Superadmin' : session?.user?.role === 'admin' ? 'RRHH' : session?.user?.role === 'manager' ? 'Jefe/Gerente' : 'Usuario'}
                 </p>
               </div>
             </div>

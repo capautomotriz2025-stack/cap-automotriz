@@ -112,6 +112,7 @@ export default function UsersPage() {
     const variants: Record<string, { color: string; icon: any }> = {
       superadmin: { color: 'bg-purple-100 text-purple-800 border-purple-200', icon: Shield },
       admin: { color: 'bg-blue-100 text-blue-800 border-blue-200', icon: Shield },
+      manager: { color: 'bg-amber-100 text-amber-800 border-amber-200', icon: UserIcon },
       user: { color: 'bg-gray-100 text-gray-800 border-gray-200', icon: UserIcon },
     };
 
@@ -300,7 +301,8 @@ export default function UsersPage() {
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                   >
                     <option value="user">User</option>
-                    <option value="admin">Admin</option>
+                    <option value="manager">Manager (Jefe/Gerente)</option>
+                    <option value="admin">Admin (RRHH)</option>
                     <option value="superadmin">Superadmin</option>
                   </select>
                 </div>

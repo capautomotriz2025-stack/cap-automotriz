@@ -52,6 +52,7 @@ export interface IVacancy extends Document {
   applicationDeadline?: Date; // Fecha límite para recibir CVs
   timecv?: string; // Tiempo de recepción de CVs: '1 semana', '1 mes', '2 meses', '3 meses', '6 meses', '1 año'
   timecvExpiresAt?: Date; // Fecha de expiración calculada basada en timecv
+  thresholds?: { ideal: number; potential: number; review: number }; // Umbrales de clasificación (vacante)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -115,7 +116,12 @@ const VacancySchema = new Schema<IVacancy>({
   closedAt: { type: Date },
   applicationDeadline: { type: Date }, // Fecha límite para recibir CVs
   timecv: { type: String }, // Tiempo de recepción de CVs
-  timecvExpiresAt: { type: Date } // Fecha de expiración calculada
+  timecvExpiresAt: { type: Date }, // Fecha de expiración calculada
+  thresholds: {
+    ideal: { type: Number, default: 80 },
+    potential: { type: Number, default: 65 },
+    review: { type: Number, default: 50 }
+  }
 }, {
   timestamps: true
 });

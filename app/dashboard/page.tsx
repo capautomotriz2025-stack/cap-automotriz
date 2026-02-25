@@ -159,10 +159,12 @@ export default function DashboardPage() {
     byDepartment: Array<{ name: string; value: number; percentage: string }>;
     byCompany: Array<{ name: string; value: number; percentage: string }>;
     byStatus: Array<{ name: string; value: number; percentage: string }>;
+    byVacancyStatus: Array<{ name: string; value: number; percentage: string }>;
   }>({
     byDepartment: [],
     byCompany: [],
-    byStatus: []
+    byStatus: [],
+    byVacancyStatus: []
   });
 
   useEffect(() => {
@@ -322,10 +324,30 @@ export default function DashboardPage() {
           percentage: candidates.length > 0 ? (((value as number) / candidates.length) * 100).toFixed(1) : '0'
         }));
 
+        // Vacantes por estado (draft, published, closed, pending) - todas las vacantes
+        const vacancyStatusLabels: Record<string, string> = {
+          draft: 'Borrador',
+          published: 'Publicada',
+          closed: 'Cerrada',
+          pending: 'Pendiente'
+        };
+        const vacancyStatusCounts: Record<string, number> = {};
+        vacancies.forEach((v: any) => {
+          const s = v.status || 'draft';
+          const label = vacancyStatusLabels[s] || s;
+          vacancyStatusCounts[label] = (vacancyStatusCounts[label] || 0) + 1;
+        });
+        const byVacancyStatus = Object.entries(vacancyStatusCounts).map(([name, value]) => ({
+          name,
+          value,
+          percentage: totalProcessesRequested > 0 ? (((value as number) / totalProcessesRequested) * 100).toFixed(1) : '0'
+        }));
+
         setChartData({
-          byDepartment: byDepartment.slice(0, 6), // Top 6
-          byCompany: byCompany.slice(0, 5), // Top 5
-          byStatus: byStatus
+          byDepartment: byDepartment.slice(0, 6), // Top 6 departamentos
+          byCompany: byCompany.slice(0, 5), // Top 5 empresas
+          byStatus: byStatus,
+          byVacancyStatus: byVacancyStatus
         });
       }
     } catch (error) {
@@ -435,15 +457,18 @@ export default function DashboardPage() {
             colors={[COLORS.lightBlue, COLORS.lightGreen, COLORS.orange, COLORS.purple, COLORS.darkGreen]}
           />
         </div>
-        {/* Segunda fila: 1 gráfico centrado */}
-        <div className="flex justify-center">
-          <div className="w-full max-w-2xl">
-            <PieChartCard
-              title="Recursos por Estado del Proceso"
-              data={chartData.byStatus}
-              colors={[COLORS.gray, COLORS.lightBlue, COLORS.yellow, COLORS.purple, COLORS.lightGreen, COLORS.darkGreen]}
-            />
-          </div>
+        {/* Segunda fila: estado de candidatos y estado de vacantes */}
+        <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-2">
+          <PieChartCard
+            title="Recursos por Estado del Proceso"
+            data={chartData.byStatus}
+            colors={[COLORS.gray, COLORS.lightBlue, COLORS.yellow, COLORS.purple, COLORS.lightGreen, COLORS.darkGreen]}
+          />
+          <PieChartCard
+            title="Vacantes por Estado"
+            data={chartData.byVacancyStatus}
+            colors={[COLORS.gray, COLORS.blue, COLORS.green, COLORS.orange]}
+          />
         </div>
       </div>
     </div>

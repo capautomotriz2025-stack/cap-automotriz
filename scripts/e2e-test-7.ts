@@ -208,6 +208,7 @@ async function main() {
       requiredSkills: vacancy.requiredSkills || [],
       desiredSkills: vacancy.desiredSkills || [],
       timecv: '3 meses',
+      thresholds: vacancy.thresholds || { ideal: 80, potential: 65, review: 50 },
     };
 
     const putRes = await api.put(`/vacancies/${solicitudId}`, completePayload);

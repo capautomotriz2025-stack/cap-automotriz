@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Sparkles, Loader2, Plus, X, Bot, Upload } from 'lucide-react';
 import Link from 'next/link';
+import { buildAgentPayloadFromVacancy } from '@/lib/vacancy-to-agent';
 
 export default function NewVacancyPage() {
   const router = useRouter();
@@ -20,6 +21,8 @@ export default function NewVacancyPage() {
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [selectedRequestId, setSelectedRequestId] = useState<string>('');
   const [isLoadingRequests, setIsLoadingRequests] = useState(true);
+  const [showCreateAgentModal, setShowCreateAgentModal] = useState(false);
+  const [creatingAgent, setCreatingAgent] = useState(false);
   
   const [formData, setFormData] = useState({
     applicantName: '',
@@ -55,7 +58,8 @@ export default function NewVacancyPage() {
     applicationDeadline: '', // Fecha límite para recibir CVs
     timecv: '', // Tiempo de recepción de CVs
     status: 'draft',
-    aiAgentId: ''
+    aiAgentId: '',
+    thresholds: { ideal: 80, potential: 65, review: 50 }
   });
 
   useEffect(() => {
@@ -112,7 +116,8 @@ export default function NewVacancyPage() {
         applicationDeadline: '',
         timecv: '',
         status: 'draft',
-        aiAgentId: ''
+        aiAgentId: '',
+        thresholds: { ideal: 80, potential: 65, review: 50 }
       });
       setSelectedRequestId('');
       return;
@@ -173,7 +178,8 @@ export default function NewVacancyPage() {
             : '',
           timecv: request.timecv || '',
           status: request.status || 'draft',
-          aiAgentId: request.aiAgentId || ''
+          aiAgentId: request.aiAgentId || '',
+          thresholds: request.thresholds || { ideal: 80, potential: 65, review: 50 }
         });
       }
     } catch (error) {
@@ -190,6 +196,29 @@ export default function NewVacancyPage() {
       }
     } catch (error) {
       console.error('Error cargando agentes:', error);
+    }
+  };
+
+  const handleCreateAgentFromVacancy = async () => {
+    if (!formData.title?.trim()) {
+      alert('Completa al menos el nombre del puesto (título) para crear el agente.');
+      return;
+    }
+    setCreatingAgent(true);
+    try {
+      const payload = buildAgentPayloadFromVacancy(formData);
+      const response = await axios.post('/api/ai-agents', { ...payload, isTemplate: false });
+      if (response.data?.success && response.data?.data?._id) {
+        setFormData((prev) => ({ ...prev, aiAgentId: response.data.data._id }));
+        await fetchAgents();
+        setShowCreateAgentModal(false);
+      } else {
+        alert(response.data?.error || 'Error al crear el agente');
+      }
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Error al crear el agente');
+    } finally {
+      setCreatingAgent(false);
     }
   };
 
@@ -292,6 +321,7 @@ export default function NewVacancyPage() {
         },
         applicationDeadline: formData.applicationDeadline ? new Date(formData.applicationDeadline) : undefined,
         timecv: formData.timecv || undefined,
+        thresholds: formData.thresholds ? { ideal: formData.thresholds.ideal, potential: formData.thresholds.potential, review: formData.thresholds.review } : undefined,
         // Mantener compatibilidad con campos legacy
         requiredProfession: formData.requiredProfessions[0] || '',
         experienceYears: parseInt(formData.experienceYearsMin) || 0,
@@ -803,6 +833,72 @@ export default function NewVacancyPage() {
           </CardContent>
         </Card>
 
+        {/* Umbrales de Clasificación */}
+        <Card className="border-2 border-purple-100 bg-gradient-to-br from-purple-50/50 to-white">
+          <CardHeader>
+            <CardTitle>Umbrales de Clasificación</CardTitle>
+            <CardDescription>Define los puntajes para cada clasificación del candidato</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="thresholdIdeal" className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  Ideal (≥)
+                </Label>
+                <Input
+                  id="thresholdIdeal"
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={formData.thresholds?.ideal ?? 80}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    thresholds: { ...(formData.thresholds || { ideal: 80, potential: 65, review: 50 }), ideal: parseInt(e.target.value) || 0 }
+                  })}
+                />
+                <p className="text-xs text-muted-foreground">Entrevistar inmediatamente</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="thresholdPotential" className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                  Potencial (≥)
+                </Label>
+                <Input
+                  id="thresholdPotential"
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={formData.thresholds?.potential ?? 65}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    thresholds: { ...(formData.thresholds || { ideal: 80, potential: 65, review: 50 }), potential: parseInt(e.target.value) || 0 }
+                  })}
+                />
+                <p className="text-xs text-muted-foreground">Considerar para segunda ronda</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="thresholdReview" className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                  Revisar (≥)
+                </Label>
+                <Input
+                  id="thresholdReview"
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={formData.thresholds?.review ?? 50}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    thresholds: { ...(formData.thresholds || { ideal: 80, potential: 65, review: 50 }), review: parseInt(e.target.value) || 0 }
+                  })}
+                />
+                <p className="text-xs text-muted-foreground">Revisar manualmente</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Agente de IA - MANTENER */}
         <Card className="border-2 border-purple-100 bg-gradient-to-br from-purple-50/50 to-white">
           <CardHeader>
@@ -818,12 +914,16 @@ export default function NewVacancyPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="aiAgent">Agente de IA</Label>
-                <Link href="/dashboard/ai-agents/new">
-                  <Button type="button" variant="outline" size="sm" className="text-purple-600 border-purple-300 hover:bg-purple-50">
-                    <Plus className="h-4 w-4 mr-1" />
-                    Crear agente
-                  </Button>
-                </Link>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-purple-600 border-purple-300 hover:bg-purple-50"
+                  onClick={() => setShowCreateAgentModal(true)}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Crear agente desde esta vacante
+                </Button>
               </div>
               <select
                 id="aiAgent"
@@ -899,6 +999,34 @@ export default function NewVacancyPage() {
           </Button>
         </div>
       </form>
+
+      {/* Modal Crear agente desde esta vacante */}
+      {showCreateAgentModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md bg-cap-gray-dark border-2 border-cap-gray">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-white">Crear agente desde esta vacante</CardTitle>
+                <Button variant="ghost" size="icon" onClick={() => setShowCreateAgentModal(false)}>
+                  <X className="h-4 w-4 text-white" />
+                </Button>
+              </div>
+              <CardDescription className="text-cap-gray-lightest">
+                Se creará un agente con el nombre del puesto, criterios y umbrales actuales. Se asignará automáticamente a esta vacante.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex gap-3 justify-end">
+              <Button variant="outline" onClick={() => setShowCreateAgentModal(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleCreateAgentFromVacancy} disabled={creatingAgent}>
+                {creatingAgent ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4 mr-1" />}
+                {creatingAgent ? 'Creando...' : 'Crear agente'}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
