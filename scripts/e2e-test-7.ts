@@ -96,7 +96,8 @@ async function main() {
       isNewPosition: true,
       title: SOLICITUD_TITLE,
       numberOfPositions: 1,
-      positionScale: 'escala-tres-especialistas',
+      positionScale: '3', // Oficial Senior (Escala 3) – escala unificada con requests/vacancies
+      evaluationLevel: 'intermedio',
       mainFunctions:
         'Desarrollar y mantener sistemas, gestionar proyectos tecnológicos y coordinar equipos.',
       company: 'Corporativo',

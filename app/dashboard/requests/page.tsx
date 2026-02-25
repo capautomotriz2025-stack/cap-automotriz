@@ -30,6 +30,7 @@ export default function RequestsPage() {
     contractType: '', // Tipo de contrato
     location: '', // Ubicación
     educationLevel: '',
+    evaluationLevel: '',
     requiredProfessions: ['', '', ''] as string[],
     preferredProfession: '',
     experienceYearsMin: '',
@@ -91,15 +92,25 @@ export default function RequestsPage() {
     setLoading(true);
 
     try {
-      // Validar que los porcentajes de áreas sumen 100% si hay áreas definidas
+      // Validar criterios de evaluación: al menos un área completada y porcentajes suman 100%
       const filledAreas = formData.evaluationAreas.filter(area => area.area.trim() !== '');
-      if (filledAreas.length > 0) {
-        const totalPercentage = filledAreas.reduce((sum, area) => sum + (parseFloat(area.percentage) || 0), 0);
-        if (totalPercentage !== 100) {
-          alert('Los porcentajes de las habilidades técnicas deben sumar exactamente 100%');
-          setLoading(false);
-          return;
-        }
+      if (filledAreas.length === 0) {
+        alert('Debe completar al menos una habilidad técnica en Criterios de evaluación (nombre y porcentaje).');
+        setLoading(false);
+        return;
+      }
+      const totalPercentage = filledAreas.reduce((sum, area) => sum + (parseFloat(area.percentage) || 0), 0);
+      if (totalPercentage !== 100) {
+        alert('Los porcentajes de las habilidades técnicas deben sumar exactamente 100%.');
+        setLoading(false);
+        return;
+      }
+
+      // Validar descriptor de puesto obligatorio
+      if (!formData.jobDescriptorFileUrl && !formData.jobDescriptorFile) {
+        alert('Debe adjuntar el descriptor de puesto (archivo PDF).');
+        setLoading(false);
+        return;
       }
 
       // Subir archivo si existe
@@ -126,6 +137,7 @@ export default function RequestsPage() {
         location: formData.location || 'Por definir', // Valor temporal, se completará en Vacantes
         // Criterios de evaluación
         educationLevel: formData.educationLevel || undefined,
+        evaluationLevel: formData.evaluationLevel || undefined,
         requiredProfessions: formData.requiredProfessions.filter(p => p.trim() !== ''),
         preferredProfession: formData.preferredProfession || undefined,
         experienceYearsMin: formData.experienceYearsMin ? parseInt(formData.experienceYearsMin) || 0 : 0,
@@ -277,7 +289,7 @@ export default function RequestsPage() {
                 <option value="2">Oficial Junior (Escala 2)</option>
                 <option value="3">Oficial Senior (Escala 3)</option>
                 <option value="4">Analista (Escala 4)</option>
-                <option value="4">Especialista (Escala 4)</option>
+                <option value="4e">Especialista (Escala 4)</option>
                 <option value="5">Coordinación (Escala 5)</option>
                 <option value="6">Jefatura (Escala 6)</option>
                 <option value="7">Subgerencia (Escala 7)</option>
@@ -350,7 +362,8 @@ export default function RequestsPage() {
 
             {/* Criterios de Evaluación */}
             <div className="space-y-4 pt-4 border-t border-cap-gray">
-              <Label className="text-base font-semibold">Criterios de Evaluación</Label>
+              <Label className="text-base font-semibold">Criterios de Evaluación *</Label>
+              <p className="text-xs text-muted-foreground">Complete al menos una habilidad técnica y asegure que los porcentajes sumen 100%.</p>
 
               <div className="space-y-2">
                 <Label htmlFor="educationLevel">Nivel educativo requerido</Label>
@@ -366,6 +379,22 @@ export default function RequestsPage() {
                   <option value="Estudiante universitario">Estudiante universitario</option>
                   <option value="Técnico">Técnico</option>
                   <option value="Master (Con Maestría)">Master (Con Maestría)</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="evaluationLevel">Nivel de evaluación</Label>
+                <select
+                  id="evaluationLevel"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={formData.evaluationLevel}
+                  onChange={(e) => setFormData({ ...formData, evaluationLevel: e.target.value })}
+                >
+                  <option value="">Seleccione...</option>
+                  <option value="basico">Básico</option>
+                  <option value="intermedio">Intermedio</option>
+                  <option value="avanzado">Avanzado</option>
+                  <option value="experto">Experto</option>
                 </select>
               </div>
 
@@ -454,7 +483,7 @@ export default function RequestsPage() {
 
             {/* Descriptor de Puesto */}
             <div className="space-y-2 pt-4 border-t border-cap-gray">
-              <Label htmlFor="jobDescriptor">Descriptor de Puesto</Label>
+              <Label htmlFor="jobDescriptor">Descriptor de Puesto *</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="jobDescriptor"

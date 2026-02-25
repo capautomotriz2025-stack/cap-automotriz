@@ -269,10 +269,11 @@ export default function VacanciesPage() {
                           {vacancy.createdAt ? new Date(vacancy.createdAt).toLocaleDateString('es-MX') : 'N/A'}
                         </td>
                         <td className="px-4 py-3 text-sm text-cap-gray-lightest font-semibold">
-                          {vacancy.positionScale === 'escala-uno-gerentes' ? 'Escala Uno - Gerentes' :
-                           vacancy.positionScale === 'escala-dos-jefes-coordinadores' ? 'Escala Dos - Jefes y Coordinadores' :
-                           vacancy.positionScale === 'escala-tres-especialistas' ? 'Escala Tres - Especialistas' :
-                           vacancy.positionScale === 'escala-cuatro-oficiales-auxiliares' ? 'Escala Cuatro - Oficiales y Auxiliares' :
+                          {vacancy.positionScale === '1' ? 'Auxiliar (1)' : vacancy.positionScale === '2' ? 'Oficial Junior (2)' :
+                           vacancy.positionScale === '3' ? 'Oficial Senior (3)' : vacancy.positionScale === '4' ? 'Analista (4)' :
+                           vacancy.positionScale === '4e' ? 'Especialista (4)' : vacancy.positionScale === '5' ? 'Coordinación (5)' :
+                           vacancy.positionScale === '6' ? 'Jefatura (6)' : vacancy.positionScale === '7' ? 'Subgerencia (7)' :
+                           vacancy.positionScale === '8' ? 'Gerencia (8)' : vacancy.positionScale === '9' ? 'Director (9)' :
                            vacancy.positionScale || 'N/A'}
                         </td>
                         <td className="px-4 py-3 text-sm text-cap-gray-lightest font-semibold">

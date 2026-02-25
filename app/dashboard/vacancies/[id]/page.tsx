@@ -407,10 +407,16 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
                   onChange={(e) => setFormData({ ...formData, positionScale: e.target.value })}
                 >
                   <option value="">Seleccione...</option>
-                  <option value="escala-uno-gerentes">Escala Uno - Gerentes</option>
-                  <option value="escala-dos-jefes-coordinadores">Escala Dos - Jefes y Coordinadores</option>
-                  <option value="escala-tres-especialistas">Escala Tres - Especialistas</option>
-                  <option value="escala-cuatro-oficiales-auxiliares">Escala Cuatro - Oficiales y Auxiliares</option>
+                  <option value="1">Auxiliar (Escala 1)</option>
+                  <option value="2">Oficial Junior (Escala 2)</option>
+                  <option value="3">Oficial Senior (Escala 3)</option>
+                  <option value="4">Analista (Escala 4)</option>
+                  <option value="4e">Especialista (Escala 4)</option>
+                  <option value="5">Coordinación (Escala 5)</option>
+                  <option value="6">Jefatura (Escala 6)</option>
+                  <option value="7">Subgerencia (Escala 7)</option>
+                  <option value="8">Gerencia (Escala 8)</option>
+                  <option value="9">Director (Escala 9)</option>
                 </select>
               </div>
 
