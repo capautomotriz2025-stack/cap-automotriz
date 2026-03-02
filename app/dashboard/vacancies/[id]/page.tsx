@@ -23,7 +23,37 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
   const [showCreateAgentModal, setShowCreateAgentModal] = useState(false);
   const [creatingAgent, setCreatingAgent] = useState(false);
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    applicantName: string;
+    department: string;
+    costCenter: string;
+    isNewPosition: boolean;
+    title: string;
+    numberOfPositions: string;
+    positionScale: string;
+    mainFunctions: string;
+    company: string;
+    location: string;
+    contractType: string;
+    educationLevel: string;
+    requiredProfessions: string[];
+    preferredProfession: string;
+    experienceYearsMin: string;
+    experienceYearsMax: string;
+    evaluationLevel: string;
+    evaluationAreas: { area: string; percentage: string }[];
+    jobDescriptorFile: File | null;
+    jobDescriptorFileUrl: string;
+    salaryMin: string;
+    salaryMax: string;
+    currency: string;
+    applicationDeadline: string;
+    timecv: string;
+    customTimecv: string;
+    status: string;
+    aiAgentId: string;
+    thresholds: { ideal: number | ''; potential: number | ''; review: number | '' };
+  }>({
     applicantName: '',
     department: '',
     costCenter: '',
@@ -56,6 +86,7 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
     currency: 'MXN',
     applicationDeadline: '', // Fecha límite para recibir CVs
     timecv: '', // Tiempo de recepción de CVs
+    customTimecv: '', // Valor manual cuando timecv === 'custom'
     status: 'draft',
     aiAgentId: '',
     thresholds: { ideal: 80, potential: 65, review: 50 }
@@ -84,7 +115,14 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
     }
     setCreatingAgent(true);
     try {
-      const payload = buildAgentPayloadFromVacancy(formData);
+      const payload = buildAgentPayloadFromVacancy({
+        ...formData,
+        thresholds: {
+          ideal: typeof formData.thresholds?.ideal === 'number' ? formData.thresholds.ideal : 80,
+          potential: typeof formData.thresholds?.potential === 'number' ? formData.thresholds.potential : 65,
+          review: typeof formData.thresholds?.review === 'number' ? formData.thresholds.review : 50,
+        },
+      });
       const response = await axios.post('/api/ai-agents', { ...payload, isTemplate: false });
       if (response.data?.success && response.data?.data?._id) {
         setFormData((prev) => ({ ...prev, aiAgentId: response.data.data._id }));
@@ -151,7 +189,8 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
           applicationDeadline: vacancy.applicationDeadline 
             ? new Date(vacancy.applicationDeadline).toISOString().slice(0, 16)
             : '',
-          timecv: vacancy.timecv || '',
+          timecv: ['1 semana', '1 mes', '2 meses', '3 meses', '6 meses', '1 año'].includes(vacancy.timecv) ? (vacancy.timecv || '') : 'custom',
+          customTimecv: ['1 semana', '1 mes', '2 meses', '3 meses', '6 meses', '1 año'].includes(vacancy.timecv) ? '' : (vacancy.timecv || ''),
           status: vacancy.status || 'draft',
           aiAgentId: searchParams.get('agentId') || vacancy.aiAgentId || '',
           thresholds: vacancy.thresholds || { ideal: 80, potential: 65, review: 50 }
@@ -211,6 +250,35 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
     setLoading(true);
 
     try {
+      // Al publicar, exigir campos de RRHH: salario, tiempo de recepción de CVs, umbrales y agente IA
+      if (publish) {
+        if (!String(formData.salaryMin ?? '').trim() || !String(formData.salaryMax ?? '').trim()) {
+          alert('Para publicar la vacante debe completar la información salarial (mínimo y máximo).');
+          setLoading(false);
+          return;
+        }
+        const timecvVal = formData.timecv === 'custom' ? (formData.customTimecv ?? '').trim() : (formData.timecv ?? '').trim();
+        if (!timecvVal) {
+          alert('Para publicar la vacante debe indicar el tiempo de recepción de CVs.');
+          setLoading(false);
+          return;
+        }
+        const t = formData.thresholds;
+        const ideal = typeof t?.ideal === 'number' ? t.ideal : (t?.ideal === '' ? NaN : Number(t?.ideal));
+        const potential = typeof t?.potential === 'number' ? t.potential : (t?.potential === '' ? NaN : Number(t?.potential));
+        const review = typeof t?.review === 'number' ? t.review : (t?.review === '' ? NaN : Number(t?.review));
+        if ([ideal, potential, review].some((n) => isNaN(n) || n < 0 || n > 100)) {
+          alert('Para publicar la vacante debe completar los umbrales de clasificación (Ideal, Potencial y Revisar) con valores entre 0 y 100.');
+          setLoading(false);
+          return;
+        }
+        if (!formData.aiAgentId?.trim()) {
+          alert('Para publicar la vacante debe asignar un agente de IA.');
+          setLoading(false);
+          return;
+        }
+      }
+
       // Validar que los porcentajes de áreas sumen 100%
       const totalPercentage = formData.evaluationAreas
         .filter(area => area.area.trim() !== '')
@@ -263,8 +331,12 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
           currency: formData.currency
         },
         applicationDeadline: formData.applicationDeadline ? new Date(formData.applicationDeadline) : undefined,
-        timecv: formData.timecv || undefined,
-        thresholds: formData.thresholds ? { ideal: formData.thresholds.ideal, potential: formData.thresholds.potential, review: formData.thresholds.review } : undefined,
+        timecv: formData.timecv === 'custom' ? (formData.customTimecv || undefined) : (formData.timecv || undefined),
+        thresholds: formData.thresholds ? {
+          ideal: typeof formData.thresholds.ideal === 'number' ? formData.thresholds.ideal : (Number(formData.thresholds.ideal) || 0),
+          potential: typeof formData.thresholds.potential === 'number' ? formData.thresholds.potential : (Number(formData.thresholds.potential) || 0),
+          review: typeof formData.thresholds.review === 'number' ? formData.thresholds.review : (Number(formData.thresholds.review) || 0)
+        } : undefined,
         // Mantener compatibilidad con campos legacy
         requiredProfession: formData.requiredProfessions[0] || '',
         experienceYears: parseInt(formData.experienceYearsMin) || 0,
@@ -727,7 +799,7 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="timecv">Tiempo de Recepción de CVs</Label>
+              <Label htmlFor="timecv">Tiempo de Recepción de CVs *</Label>
               <select
                 id="timecv"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -741,7 +813,19 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
                 <option value="3 meses">3 meses</option>
                 <option value="6 meses">6 meses</option>
                 <option value="1 año">1 año</option>
+                <option value="custom">Ingresar manualmente</option>
               </select>
+              {formData.timecv === 'custom' && (
+                <div className="space-y-2 mt-2">
+                  <Label htmlFor="customTimecv">Valor (ej. 45 días)</Label>
+                  <Input
+                    id="customTimecv"
+                    placeholder="Ej. 45 días"
+                    value={formData.customTimecv}
+                    onChange={(e) => setFormData({ ...formData, customTimecv: e.target.value })}
+                  />
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">
                 El tiempo se calculará desde la fecha de publicación. Puedes actualizarlo después desde la tabla de vacantes.
               </p>
@@ -752,8 +836,8 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
         {/* Umbrales de Clasificación */}
         <Card className="border-2 border-purple-100 bg-gradient-to-br from-purple-50/50 to-white">
           <CardHeader>
-            <CardTitle>Umbrales de Clasificación</CardTitle>
-            <CardDescription>Define los puntajes para cada clasificación del candidato</CardDescription>
+            <CardTitle>Umbrales de Clasificación *</CardTitle>
+            <CardDescription>Define los puntajes para cada clasificación del candidato (obligatorio al publicar)</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid md:grid-cols-3 gap-4">
@@ -767,11 +851,16 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
                   type="number"
                   min={0}
                   max={100}
-                  value={formData.thresholds?.ideal ?? 80}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    thresholds: { ...(formData.thresholds || { ideal: 80, potential: 65, review: 50 }), ideal: parseInt(e.target.value) || 0 }
-                  })}
+                  value={Number.isNaN(formData.thresholds?.ideal as number) ? '' : (formData.thresholds?.ideal ?? 80)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    const n = Number(v);
+                    const next = v === '' || isNaN(n) ? Number.NaN : n;
+                    setFormData({
+                      ...formData,
+                      thresholds: { ...(formData.thresholds || { ideal: 80, potential: 65, review: 50 }), ideal: next }
+                    });
+                  }}
                 />
                 <p className="text-xs text-muted-foreground">Entrevistar inmediatamente</p>
               </div>
@@ -785,11 +874,16 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
                   type="number"
                   min={0}
                   max={100}
-                  value={formData.thresholds?.potential ?? 65}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    thresholds: { ...(formData.thresholds || { ideal: 80, potential: 65, review: 50 }), potential: parseInt(e.target.value) || 0 }
-                  })}
+                  value={Number.isNaN(formData.thresholds?.potential as number) ? '' : (formData.thresholds?.potential ?? 65)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    const n = Number(v);
+                    const next = v === '' || isNaN(n) ? Number.NaN : n;
+                    setFormData({
+                      ...formData,
+                      thresholds: { ...(formData.thresholds || { ideal: 80, potential: 65, review: 50 }), potential: next }
+                    });
+                  }}
                 />
                 <p className="text-xs text-muted-foreground">Considerar para segunda ronda</p>
               </div>
@@ -803,11 +897,16 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
                   type="number"
                   min={0}
                   max={100}
-                  value={formData.thresholds?.review ?? 50}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    thresholds: { ...(formData.thresholds || { ideal: 80, potential: 65, review: 50 }), review: parseInt(e.target.value) || 0 }
-                  })}
+                  value={Number.isNaN(formData.thresholds?.review as number) ? '' : (formData.thresholds?.review ?? 50)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    const n = Number(v);
+                    const next = v === '' || isNaN(n) ? Number.NaN : n;
+                    setFormData({
+                      ...formData,
+                      thresholds: { ...(formData.thresholds || { ideal: 80, potential: 65, review: 50 }), review: next }
+                    });
+                  }}
                 />
                 <p className="text-xs text-muted-foreground">Revisar manualmente</p>
               </div>
@@ -820,10 +919,10 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
           <CardHeader>
             <div className="flex items-center gap-2">
               <Bot className="h-5 w-5 text-purple-600" />
-              <CardTitle>Agente de Evaluación IA</CardTitle>
+              <CardTitle>Agente de Evaluación IA *</CardTitle>
             </div>
             <CardDescription>
-              Selecciona cómo la IA evaluará a los candidatos para este puesto
+              Selecciona cómo la IA evaluará a los candidatos para este puesto (obligatorio al publicar)
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -838,7 +937,7 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
                   onClick={() => setShowCreateAgentModal(true)}
                 >
                   <Plus className="h-4 w-4 mr-1" />
-                  Crear agente desde esta vacante
+                  Asignar agente a vacante
                 </Button>
               </div>
               <select
@@ -909,20 +1008,20 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
             ) : (
               <>
                 <Plus className="mr-2 h-4 w-4" />
-                Enviar Solicitud
+                Publicar vacante
               </>
             )}
           </Button>
         </div>
       </form>
 
-      {/* Modal Crear agente desde esta vacante */}
+      {/* Modal Asignar agente a vacante */}
       {showCreateAgentModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-md bg-cap-gray-dark border-2 border-cap-gray">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-white">Crear agente desde esta vacante</CardTitle>
+                <CardTitle className="text-white">Asignar agente a vacante</CardTitle>
                 <Button variant="ghost" size="icon" onClick={() => setShowCreateAgentModal(false)}>
                   <X className="h-4 w-4 text-white" />
                 </Button>
@@ -937,7 +1036,7 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
               </Button>
               <Button onClick={handleCreateAgentFromVacancy} disabled={creatingAgent}>
                 {creatingAgent ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4 mr-1" />}
-                {creatingAgent ? 'Creando...' : 'Crear agente'}
+                {creatingAgent ? 'Asignando...' : 'Asignar agente'}
               </Button>
             </CardContent>
           </Card>

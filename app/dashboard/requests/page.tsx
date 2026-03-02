@@ -92,6 +92,29 @@ export default function RequestsPage() {
     setLoading(true);
 
     try {
+      // Validar todos los campos de Información de Solicitud
+      const requiredFields: { key: keyof typeof formData; label: string }[] = [
+        { key: 'applicantName', label: 'Nombre de Solicitante' },
+        { key: 'department', label: 'Departamento' },
+        { key: 'costCenter', label: 'Centro de Costos' },
+        { key: 'title', label: 'Nombre de Puesto' },
+        { key: 'numberOfPositions', label: 'Número de Plaza' },
+        { key: 'positionScale', label: 'Escala de Puesto' },
+        { key: 'company', label: 'Empresa' },
+        { key: 'contractType', label: 'Tipo de Contrato' },
+        { key: 'location', label: 'Ubicación' },
+        { key: 'mainFunctions', label: 'Principales Funciones' },
+      ];
+      for (const { key, label } of requiredFields) {
+        const val = formData[key];
+        const isEmpty = typeof val === 'string' ? !String(val).trim() : val == null;
+        if (isEmpty) {
+          alert(`Completa todos los campos de Información de Solicitud marcados con *. Falta: ${label}`);
+          setLoading(false);
+          return;
+        }
+      }
+
       // Validar criterios de evaluación: al menos un área completada y porcentajes suman 100%
       const filledAreas = formData.evaluationAreas.filter(area => area.area.trim() !== '');
       if (filledAreas.length === 0) {
@@ -134,7 +157,7 @@ export default function RequestsPage() {
         mainFunctions: formData.mainFunctions,
         company: formData.company || undefined,
         contractType: formData.contractType || undefined,
-        location: formData.location || 'Por definir', // Valor temporal, se completará en Vacantes
+        location: formData.location,
         // Criterios de evaluación
         educationLevel: formData.educationLevel || undefined,
         evaluationLevel: formData.evaluationLevel || undefined,
@@ -300,9 +323,10 @@ export default function RequestsPage() {
 
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="company">Empresa</Label>
+                <Label htmlFor="company">Empresa *</Label>
                 <select
                   id="company"
+                  required
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={formData.company}
                   onChange={(e) => setFormData({ ...formData, company: e.target.value })}
@@ -320,9 +344,10 @@ export default function RequestsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="contractType">Tipo de Contrato</Label>
+                <Label htmlFor="contractType">Tipo de Contrato *</Label>
                 <select
                   id="contractType"
+                  required
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={formData.contractType}
                   onChange={(e) => setFormData({ ...formData, contractType: e.target.value })}
@@ -339,9 +364,10 @@ export default function RequestsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="location">Ubicación</Label>
+              <Label htmlFor="location">Ubicación *</Label>
               <Input
                 id="location"
+                required
                 placeholder="ej. Ciudad de México (Híbrido)"
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
