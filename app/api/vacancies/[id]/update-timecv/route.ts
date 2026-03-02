@@ -41,18 +41,10 @@ export async function PUT(
     await connectDB();
     const body = await request.json();
     const { timecv } = body;
-    
-    if (!timecv) {
+
+    if (!timecv || typeof timecv !== 'string' || !timecv.trim()) {
       return NextResponse.json(
         { success: false, error: 'timecv es requerido' },
-        { status: 400 }
-      );
-    }
-    
-    const validTimecvOptions = ['1 semana', '1 mes', '2 meses', '3 meses', '6 meses', '1 año'];
-    if (!validTimecvOptions.includes(timecv)) {
-      return NextResponse.json(
-        { success: false, error: 'timecv inválido. Opciones válidas: ' + validTimecvOptions.join(', ') },
         { status: 400 }
       );
     }

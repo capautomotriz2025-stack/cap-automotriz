@@ -182,7 +182,7 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
                 { area: '', percentage: '' }
               ],
           jobDescriptorFile: null,
-          jobDescriptorFileUrl: vacancy.jobDescriptorFile || '',
+          jobDescriptorFileUrl: vacancy.jobDescriptorFileUrl || vacancy.jobDescriptorFile || '',
           salaryMin: vacancy.salary?.min?.toString() || '',
           salaryMax: vacancy.salary?.max?.toString() || '',
           currency: vacancy.salary?.currency || 'MXN',

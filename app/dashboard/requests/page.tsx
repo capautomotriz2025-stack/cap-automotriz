@@ -115,6 +115,46 @@ export default function RequestsPage() {
         }
       }
 
+      // Validar campos obligatorios de Criterios de evaluación
+      if (!formData.educationLevel.trim()) {
+        alert('Completa el campo Nivel educativo requerido en Criterios de evaluación.');
+        setLoading(false);
+        return;
+      }
+
+      if (!formData.evaluationLevel.trim()) {
+        alert('Completa el campo Nivel de evaluación en Criterios de evaluación.');
+        setLoading(false);
+        return;
+      }
+
+      const hasAtLeastOneProfession = formData.requiredProfessions.some((p) => p.trim() !== '');
+      if (!hasAtLeastOneProfession) {
+        alert('Ingresa al menos una profesión en Profesiones requeridas en Criterios de evaluación.');
+        setLoading(false);
+        return;
+      }
+
+      if (!formData.preferredProfession.trim()) {
+        alert('Completa el campo Profesión preferible en Criterios de evaluación.');
+        setLoading(false);
+        return;
+      }
+
+      if (!String(formData.experienceYearsMin ?? '').trim() || !String(formData.experienceYearsMax ?? '').trim()) {
+        alert('Completa los campos Años de experiencia mínimo y máximo en Criterios de evaluación.');
+        setLoading(false);
+        return;
+      }
+
+      const minExp = parseInt(formData.experienceYearsMin, 10);
+      const maxExp = parseInt(formData.experienceYearsMax, 10);
+      if (!Number.isNaN(minExp) && !Number.isNaN(maxExp) && minExp > maxExp) {
+        alert('Los años de experiencia mínimo no pueden ser mayores que los años de experiencia máximo.');
+        setLoading(false);
+        return;
+      }
+
       // Validar criterios de evaluación: al menos un área completada y porcentajes suman 100%
       const filledAreas = formData.evaluationAreas.filter(area => area.area.trim() !== '');
       if (filledAreas.length === 0) {
@@ -392,7 +432,7 @@ export default function RequestsPage() {
               <p className="text-xs text-muted-foreground">Complete al menos una habilidad técnica y asegure que los porcentajes sumen 100%.</p>
 
               <div className="space-y-2">
-                <Label htmlFor="educationLevel">Nivel educativo requerido</Label>
+                <Label htmlFor="educationLevel">Nivel educativo requerido *</Label>
                 <select
                   id="educationLevel"
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -409,7 +449,7 @@ export default function RequestsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="evaluationLevel">Nivel de evaluación</Label>
+                <Label htmlFor="evaluationLevel">Nivel de evaluación *</Label>
                 <select
                   id="evaluationLevel"
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -425,7 +465,7 @@ export default function RequestsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Profesiones requeridas</Label>
+                <Label>Profesiones requeridas * (al menos una)</Label>
                 <div className="grid md:grid-cols-3 gap-4">
                   {formData.requiredProfessions.map((profession, index) => (
                     <Input
@@ -443,7 +483,7 @@ export default function RequestsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="preferredProfession">Profesión preferible</Label>
+                <Label htmlFor="preferredProfession">Profesión preferible *</Label>
                 <Input
                   id="preferredProfession"
                   placeholder="ej. Ingeniería en Sistemas"
@@ -454,7 +494,7 @@ export default function RequestsPage() {
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="experienceYearsMin">Años de experiencia mínimo</Label>
+                  <Label htmlFor="experienceYearsMin">Años de experiencia mínimo *</Label>
                   <Input
                     id="experienceYearsMin"
                     type="number"
@@ -465,7 +505,7 @@ export default function RequestsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="experienceYearsMax">Años de experiencia máximo</Label>
+                  <Label htmlFor="experienceYearsMax">Años de experiencia máximo *</Label>
                   <Input
                     id="experienceYearsMax"
                     type="number"

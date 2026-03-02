@@ -200,7 +200,7 @@ export default function NewVacancyPage() {
                 { area: '', percentage: '' }
               ],
           jobDescriptorFile: null,
-          jobDescriptorFileUrl: request.jobDescriptorFile || '',
+          jobDescriptorFileUrl: request.jobDescriptorFileUrl || request.jobDescriptorFile || '',
           salaryMin: request.salary?.min?.toString() || '',
           salaryMax: request.salary?.max?.toString() || '',
           currency: request.salary?.currency || 'MXN',
@@ -820,6 +820,11 @@ export default function NewVacancyPage() {
                   <Loader2 className="h-4 w-4 animate-spin" />
                 )}
               </div>
+              {selectedRequestId && formData.jobDescriptorFileUrl && !formData.jobDescriptorFile && (
+                <p className="text-xs text-muted-foreground">
+                  Descriptor cargado desde la solicitud. Puedes reemplazarlo subiendo un nuevo archivo.
+                </p>
+              )}
               <p className="text-xs text-muted-foreground">
                 Solo archivos PDF (máximo 10 MB)
               </p>

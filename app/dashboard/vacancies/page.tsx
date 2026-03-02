@@ -27,6 +27,7 @@ export default function VacanciesPage() {
   const [timecvModalOpen, setTimecvModalOpen] = useState(false);
   const [vacancyToUpdateTimecv, setVacancyToUpdateTimecv] = useState<any>(null);
   const [selectedTimecv, setSelectedTimecv] = useState<string>('');
+  const [customTimecv, setCustomTimecv] = useState<string>('');
   const [isUpdatingTimecv, setIsUpdatingTimecv] = useState(false);
 
   useEffect(() => {
@@ -81,29 +82,47 @@ export default function VacanciesPage() {
 
   const openTimecvModal = (vacancy: any) => {
     setVacancyToUpdateTimecv(vacancy);
-    setSelectedTimecv(vacancy.timecv || '');
+    const fixedOptions = ['1 semana', '1 mes', '2 meses', '3 meses', '6 meses', '1 año'];
+    if (vacancy.timecv && fixedOptions.includes(vacancy.timecv)) {
+      setSelectedTimecv(vacancy.timecv);
+      setCustomTimecv('');
+    } else if (vacancy.timecv) {
+      setSelectedTimecv('custom');
+      setCustomTimecv(vacancy.timecv);
+    } else {
+      setSelectedTimecv('');
+      setCustomTimecv('');
+    }
     setTimecvModalOpen(true);
   };
 
   const handleUpdateTimecv = async () => {
-    if (!vacancyToUpdateTimecv || !selectedTimecv) return;
+    if (!vacancyToUpdateTimecv) return;
+
+    const valueToSend =
+      selectedTimecv === 'custom'
+        ? customTimecv.trim()
+        : selectedTimecv;
+
+    if (!valueToSend) return;
 
     setIsUpdatingTimecv(true);
     try {
       const response = await axios.put(`/api/vacancies/${vacancyToUpdateTimecv._id}/update-timecv`, {
-        timecv: selectedTimecv
+        timecv: valueToSend,
       });
 
       if (response.data.success) {
         // Actualizar la vacante en el estado
         setVacancies(vacancies.map(v => 
           v._id === vacancyToUpdateTimecv._id 
-            ? { ...v, timecv: selectedTimecv, timecvExpiresAt: response.data.data.timecvExpiresAt }
+            ? { ...v, timecv: valueToSend, timecvExpiresAt: response.data.data.timecvExpiresAt }
             : v
         ));
         setTimecvModalOpen(false);
         setVacancyToUpdateTimecv(null);
         setSelectedTimecv('');
+        setCustomTimecv('');
         alert('Tiempo de recepción de CVs actualizado exitosamente');
       }
     } catch (error: any) {
@@ -586,8 +605,24 @@ export default function VacanciesPage() {
                       <option value="3 meses">3 meses</option>
                       <option value="6 meses">6 meses</option>
                       <option value="1 año">1 año</option>
+                      <option value="custom">Ingresar manualmente</option>
                     </select>
-                    {selectedTimecv && (
+                    {selectedTimecv === 'custom' && (
+                      <div className="mt-3 space-y-1">
+                        <Label htmlFor="custom-timecv" className="text-white font-semibold text-sm">
+                          Tiempo manual
+                        </Label>
+                        <Input
+                          id="custom-timecv"
+                          type="text"
+                          placeholder="Ej. 45 días"
+                          value={customTimecv}
+                          onChange={(e) => setCustomTimecv(e.target.value)}
+                          className="bg-cap-black border-2 border-input text-white text-sm"
+                        />
+                      </div>
+                    )}
+                    {selectedTimecv && selectedTimecv !== 'custom' && (
                       <p className="text-sm text-cap-gray-lightest mt-2">
                         La fecha de expiración se calculará automáticamente desde la fecha de publicación.
                       </p>
@@ -604,6 +639,7 @@ export default function VacanciesPage() {
                 setTimecvModalOpen(false);
                 setVacancyToUpdateTimecv(null);
                 setSelectedTimecv('');
+                setCustomTimecv('');
               }}
               disabled={isUpdatingTimecv}
               className="flex-1 border-2 border-cap-gray text-cap-gray-lightest hover:border-cap-red hover:text-cap-red font-bold transition-all"
@@ -613,7 +649,11 @@ export default function VacanciesPage() {
             </Button>
             <Button
               onClick={handleUpdateTimecv}
-              disabled={isUpdatingTimecv || !selectedTimecv}
+              disabled={
+                isUpdatingTimecv ||
+                !selectedTimecv ||
+                (selectedTimecv === 'custom' && !customTimecv.trim())
+              }
               className="flex-1 bg-cap-blue hover:bg-cap-blue-dark text-white font-black transition-all hover:scale-105"
             >
               {isUpdatingTimecv ? (
