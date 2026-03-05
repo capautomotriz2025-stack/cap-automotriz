@@ -290,11 +290,13 @@ async function generateGenericCVPDF(
         : 'No especificado'
     );
 
+    const { dateOfBirth, nationality, address } = extractPersonalDataFromCV(cvText || '');
+
     // Etiquetas en negrita + valor
     const labelValuePairs: Array<[string, string]> = [
-      ['Fecha de nacimiento:', 'No disponible'],
-      ['Nacionalidad:', 'No disponible'],
-      ['Dirección:', 'No disponible'],
+      ['Fecha de nacimiento:', sanitizeForPdf(dateOfBirth || 'No disponible')],
+      ['Nacionalidad:', sanitizeForPdf(nationality || 'No disponible')],
+      ['Dirección:', sanitizeForPdf(address || vacancy.location || 'No disponible')],
       ['Teléfono:', sanitizeForPdf(candidate.phone || 'No disponible')],
       ['Correo electrónico:', sanitizeForPdf(candidate.email || 'No disponible')],
       ['Aspiración salarial:', salarioTexto],
@@ -635,6 +637,49 @@ function extractEducationFromCV(cvText: string): string[] {
   }
 
   return found.slice(0, 3);
+}
+
+/**
+ * Extrae datos personales del CV original (fecha de nacimiento, nacionalidad, dirección)
+ */
+function extractPersonalDataFromCV(cvText: string): {
+  dateOfBirth?: string;
+  nationality?: string;
+  address?: string;
+} {
+  const lines = cvText
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  let dateOfBirth: string | undefined;
+  let nationality: string | undefined;
+  let address: string | undefined;
+
+  for (const line of lines) {
+    const lower = line.toLowerCase();
+
+    if (!dateOfBirth && /fecha de nacimiento/i.test(lower)) {
+      const m = line.match(
+        /fecha de nacimiento\s*[:\-]?\s*([0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4})/i
+      );
+      if (m) dateOfBirth = m[1];
+    }
+
+    if (!nationality && /nacionalidad/i.test(lower)) {
+      const m = line.match(/nacionalidad\s*[:\-]?\s*(.+)$/i);
+      if (m) nationality = m[1].trim();
+    }
+
+    if (!address && /direcci[oó]n/i.test(lower)) {
+      const m = line.match(/direcci[oó]n\s*[:\-]?\s*(.+)$/i);
+      if (m) address = m[1].trim();
+    }
+
+    if (dateOfBirth && nationality && address) break;
+  }
+
+  return { dateOfBirth, nationality, address };
 }
 
 /**
