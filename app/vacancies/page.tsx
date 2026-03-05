@@ -86,14 +86,7 @@ export default function PublicVacanciesPage() {
                 <p className="text-xs text-cap-gray uppercase tracking-widest font-bold">Grupo Automotriz</p>
               </div>
             </Link>
-            <div className="flex gap-3">
-              <Link href="/">
-                <Button variant="ghost" className="text-cap-gray-lightest hover:text-white font-bold">Inicio</Button>
-              </Link>
-              <Link href="/login">
-                <Button className="bg-racing-gradient hover:scale-105 transition-transform shadow-racing font-bold">Panel Admin</Button>
-              </Link>
-            </div>
+            <div className="flex gap-3" />
           </div>
         </div>
       </nav>
@@ -169,30 +162,6 @@ export default function PublicVacanciesPage() {
                 {new Set(filteredVacancies.map(v => v.department)).size}
               </div>
               <p className="text-sm text-cap-gray-lightest font-bold">Departamentos</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 border-cap-red/30 bg-cap-gray-dark/80 backdrop-blur-sm shadow-racing-xl hover:scale-105 transition-transform">
-            <CardContent className="pt-6 text-center">
-              <div className="w-12 h-12 bg-racing-gradient rounded-xl flex items-center justify-center mx-auto mb-3 shadow-racing">
-                <Gauge className="w-6 h-6 text-white" />
-              </div>
-              <div className="text-4xl font-black text-cap-red mb-1">
-                24h
-              </div>
-              <p className="text-sm text-cap-gray-lightest font-bold">Respuesta Promedio</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 border-cap-gray bg-cap-gray-dark/80 backdrop-blur-sm shadow-racing-xl hover:scale-105 transition-transform">
-            <CardContent className="pt-6 text-center">
-              <div className="w-12 h-12 bg-cap-gray rounded-xl flex items-center justify-center mx-auto mb-3">
-                <TrendingUp className="w-6 h-6 text-cap-gray-lightest" />
-              </div>
-              <div className="text-4xl font-black text-white mb-1">
-                95%
-              </div>
-              <p className="text-sm text-cap-gray-lightest font-bold">Tasa de Match IA</p>
             </CardContent>
           </Card>
         </div>
@@ -273,14 +242,16 @@ export default function PublicVacanciesPage() {
                       </div>
                       <span className="font-bold">{vacancy.location}</span>
                     </div>
-                    <div className="flex items-center text-sm text-cap-gray-lightest">
-                      <div className="w-8 h-8 bg-racing-gradient/20 rounded-lg flex items-center justify-center mr-3">
-                        <DollarSign className="w-4 h-4 text-cap-red" />
+                    {(vacancy.requiredProfession || (vacancy.requiredProfessions && vacancy.requiredProfessions[0])) && (
+                      <div className="flex items-center text-sm text-cap-gray-lightest">
+                        <div className="w-8 h-8 bg-racing-gradient/20 rounded-lg flex items-center justify-center mr-3">
+                          <Briefcase className="w-4 h-4 text-cap-red" />
+                        </div>
+                        <span className="font-bold">
+                          {vacancy.requiredProfession || (vacancy.requiredProfessions && vacancy.requiredProfessions[0])}
+                        </span>
                       </div>
-                      <span className="font-bold">
-                        {formatCurrency(vacancy.salary.min)} - {formatCurrency(vacancy.salary.max)}
-                      </span>
-                    </div>
+                    )}
                     {vacancy.experienceYears > 0 && (
                       <div className="flex items-center text-sm text-cap-gray-lightest">
                         <div className="w-8 h-8 bg-cap-black rounded-lg flex items-center justify-center mr-3">

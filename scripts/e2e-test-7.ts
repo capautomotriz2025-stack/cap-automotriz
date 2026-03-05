@@ -5,9 +5,12 @@
  * 2. Crear agente de IA desde esa solicitud
  * 3. Completar vacante (published + aiAgentId, applicationDeadline en el pasado para notificación)
  * 4. Aplicar con PDF (candidato)
- * 5. Avanzar candidato por estados Kanban (hasta hired)
- * 6. Llamar POST /api/notifications para crear aviso "tiempo de recepción de CVs finalizado"
- * 7. Verificación
+ * 5. Ejecutar análisis IA del candidato (dispara notificación de análisis terminado)
+ * 6. Generar CV genérico e entrevista del candidato
+ * 7. Avanzar candidato por estados Kanban (hasta hired, disparando correos + notificaciones de estados clave)
+ * 8. Llamar POST /api/notifications para crear aviso "tiempo de recepción de CVs finalizado"
+ * 9. Probar buscador IA de BD candidatos (Sandy)
+ * 10. Verificación
  *
  * Uso:
  *   npx tsx scripts/e2e-test-7.ts              (test 8 por defecto)
@@ -253,8 +256,43 @@ async function main() {
     console.log('   Candidato creado:', candidateId);
     console.log('   (Se envía email de confirmación al candidato si está configurado.)');
 
-    // —— Paso 5: Avanzar estados Kanban ——
-    console.log('\n5. Avanzando estados en Kanban (disparan emails en interview, evaluation, offer)...');
+    // —— Paso 5: Análisis IA del candidato ——
+    console.log('\n5. Ejecutando análisis IA del candidato (POST /api/ai/analyze-candidate)...');
+    const analyzeRes = await api.post('/ai/analyze-candidate', { candidateId });
+    if (!analyzeRes.data.success) throw new Error('Error en análisis IA del candidato');
+    console.log(
+      '   IA OK. Score:',
+      analyzeRes.data.data?.score,
+      'Clasificación:',
+      analyzeRes.data.data?.classification
+    );
+    console.log('   (Se genera notificación "Análisis IA completado" vinculada al candidato/vacante.)');
+
+    // —— Paso 6: Generar CV genérico y entrevista ——
+    console.log('\n6. Generando CV genérico y guía de entrevista...');
+    try {
+      const cvGenRes = await api.post(`/candidates/${candidateId}/generate-cv`);
+      if (cvGenRes.data.success) {
+        console.log('   CV genérico generado. pdfUrl:', cvGenRes.data.data?.pdfUrl || 'N/A');
+      } else {
+        console.log('   (Advertencia) No se pudo generar CV genérico');
+      }
+    } catch (e: any) {
+      console.log('   (Advertencia) Error generando CV genérico:', e?.message || e);
+    }
+    try {
+      const interviewRes = await api.post(`/candidates/${candidateId}/generate-interview`);
+      if (interviewRes.data.success) {
+        console.log('   Guía de entrevista generada. pdfUrl:', interviewRes.data.data?.pdfUrl || 'N/A');
+      } else {
+        console.log('   (Advertencia) No se pudo generar guía de entrevista');
+      }
+    } catch (e: any) {
+      console.log('   (Advertencia) Error generando entrevista:', e?.message || e);
+    }
+
+    // —— Paso 7: Avanzar estados Kanban ——
+    console.log('\n7. Avanzando estados en Kanban (disparan emails en interview, evaluation, offer y notificaciones de estados clave)...');
     const statuses = ['screening', 'interview', 'evaluation', 'interview-boss', 'offer', 'hired'];
     for (const status of statuses) {
       const updateRes = await api.put(`/candidates/${candidateId}`, { status });
@@ -262,9 +300,10 @@ async function main() {
       console.log('   ->', status);
     }
     console.log('   (Al pasar a hired se setea hiredAt para Time to Hire / Time to Fill.)');
+    console.log('   (Estados evaluation, interview-boss y offer generan notificaciones específicas de cambio de etapa.)');
 
-    // —— Paso 6: Crear notificación "tiempo de recepción de CVs finalizado" ——
-    console.log('\n6. Creando notificaciones de vacantes con tiempo de recepción de CVs finalizado...');
+    // —— Paso 8: Crear notificación "tiempo de recepción de CVs finalizado" ——
+    console.log('\n8. Creando notificaciones de vacantes con tiempo de recepción de CVs finalizado...');
     const notifRes = await api.post('/notifications');
     if (notifRes.data.success && notifRes.data.data?.length > 0) {
       console.log(`   Creadas ${notifRes.data.data.length} notificación(es). Ver en ${BASE_URL}/dashboard/notifications`);
@@ -272,19 +311,38 @@ async function main() {
       console.log('   (Ninguna nueva o ya existían. Revisa /dashboard/notifications.)');
     }
 
-    // —— Paso 7: Verificación y documentación ——
-    console.log('\n7. Verificación');
-    console.log('   Todas las llamadas API devolvieron éxito.');
+    // —— Paso 9: Probar buscador IA de BD candidatos (Sandy) ——
+    console.log('\n9. Probando buscador IA de BD candidatos (Sandy)...');
+    try {
+      const sandyRes = await api.post('/ai/search-candidates', {
+        query: `Muéstrame procesos y candidatos ideales relacionados con "${SOLICITUD_TITLE}" o perfiles de Ingeniería.`,
+      });
+      if (sandyRes.data.success) {
+        console.log('   Sandy respondió:\n   ', sandyRes.data.answer);
+      } else {
+        console.log('   (Advertencia) Sandy no devolvió éxito en la búsqueda IA.');
+      }
+    } catch (e: any) {
+      console.log('   (Advertencia) Error llamando a Sandy /ai/search-candidates:', e?.message || e);
+    }
+
+    // —— Paso 10: Verificación y documentación ——
+    console.log('\n10. Verificación');
+    console.log('   Todas las llamadas API críticas devolvieron éxito.');
     console.log('\nMensajes enviados (revisar bandeja / logs según configuración):');
     console.log('   - Aplicación: confirmación al candidato (email y opcionalmente WhatsApp).');
     console.log('   - Cambios de estado: invitación a entrevista (interview), evaluación (evaluation), oferta (offer).');
-    console.log('   - Notificaciones: "Tiempo de recepción de CVs finalizado" en /dashboard/notifications');
+    console.log('   - Notificaciones:');
+    console.log('       • "Tiempo de recepción de CVs finalizado" en /dashboard/notifications');
+    console.log('       • "Análisis IA completado" del candidato');
+    console.log('       • Cambios de estado clave: A pruebas, A entrevista jefe, Acepto oferta.');
     console.log('\n--- Resumen ---');
     console.log('Solicitud/Vacante ID:', solicitudId);
     console.log('Agente ID:', agentId);
     console.log('Candidato ID:', candidateId);
     console.log('Apply URL:', `${BASE_URL}/apply/${solicitudId}`);
     console.log('Notificaciones:', `${BASE_URL}/dashboard/notifications`);
+    console.log('BD Candidatos:', `${BASE_URL}/dashboard/cvs-by-process`);
     console.log(`\nE2E ${SOLICITUD_TITLE} completado correctamente.`);
   } catch (error: any) {
     if (error.code === 'ECONNREFUSED') {

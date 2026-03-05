@@ -4,6 +4,7 @@ import connectDB from '@/lib/mongodb';
 import Candidate from '@/models/Candidate';
 import Vacancy from '@/models/Vacancy';
 import AIAgent from '@/models/AIAgent';
+import Notification from '@/models/Notification';
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,10 +62,27 @@ export async function POST(request: NextRequest) {
     else mappedClassification = 'no perfila';
     
     // Actualizar candidato
+    const previousScore = candidate.aiScore;
     candidate.aiScore = score;
     candidate.aiClassification = mappedClassification;
     candidate.aiJustification = analysis.summary || analysis.justification;
     await candidate.save();
+
+    // Crear notificación de fin de análisis IA (solo la primera vez que se obtiene score)
+    if (!previousScore || previousScore === 0) {
+      try {
+        await Notification.create({
+          type: 'candidate_ai_finished',
+          title: 'Análisis IA completado',
+          message: `La IA terminó de analizar al candidato "${candidate.fullName}" para la vacante "${vacancy.title}". Puntaje: ${score}/100.`,
+          relatedCandidateId: candidate._id,
+          relatedVacancyId: vacancy._id,
+          read: false,
+        });
+      } catch (notifError) {
+        console.error('Error creando notificación de análisis IA desde /ai/analyze-candidate:', notifError);
+      }
+    }
     
     return NextResponse.json({
       success: true,

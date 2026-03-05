@@ -23,6 +23,21 @@ export default function CandidatesPage() {
   const [candidateForScore, setCandidateForScore] = useState<any>(null);
   const [psychometricScore, setPsychometricScore] = useState('');
   const [savingScore, setSavingScore] = useState(false);
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
+  const [statusSelectValue, setStatusSelectValue] = useState<Record<string, string>>({});
+  const [referencesModalOpen, setReferencesModalOpen] = useState(false);
+  const [candidateForReferences, setCandidateForReferences] = useState<any>(null);
+  const [references, setReferences] = useState<
+    { name: string; company: string; phone: string; email: string }[]
+  >([
+    { name: '', company: '', phone: '', email: '' },
+    { name: '', company: '', phone: '', email: '' },
+  ]);
+  const [testsModalOpen, setTestsModalOpen] = useState(false);
+  const [candidateForTests, setCandidateForTests] = useState<any>(null);
+  const [tests, setTests] = useState<{ name: string; note: string }[]>([
+    { name: '', note: '' },
+  ]);
   
   // Paginación
   const [currentPage, setCurrentPage] = useState(1);
@@ -87,6 +102,12 @@ export default function CandidatesPage() {
         }));
         
         setcandidates(normalizedCandidates);
+        // Inicializar selects de estado
+        const initialStatus: Record<string, string> = {};
+        normalizedCandidates.forEach((c: any) => {
+          initialStatus[c._id] = c.status;
+        });
+        setStatusSelectValue(initialStatus);
       }
     } catch (error) {
       console.error('Error fetching candidates:', error);
@@ -257,6 +278,54 @@ export default function CandidatesPage() {
                       <Badge className={`${getClassificationColor(candidate.aiClassification)} text-white font-bold border`}>
                         {candidate.aiClassification}
                       </Badge>
+                      {/* Actualizar etapa de candidato */}
+                      <select
+                        value={statusSelectValue[candidate._id] || candidate.status}
+                        onChange={async (e) => {
+                          const newStatus = e.target.value;
+                          setStatusSelectValue((prev) => ({
+                            ...prev,
+                            [candidate._id]: newStatus,
+                          }));
+                          setUpdatingStatusId(candidate._id);
+                          try {
+                            const response = await axios.put(`/api/candidates/${candidate._id}`, {
+                              status: newStatus,
+                            });
+                            if (response.data.success) {
+                              setcandidates((prev) =>
+                                prev.map((c) =>
+                                  c._id === candidate._id ? { ...c, status: newStatus } : c
+                                )
+                              );
+                            } else {
+                              alert('Error al actualizar la etapa del candidato');
+                            }
+                          } catch (error: any) {
+                            console.error('Error actualizando etapa de candidato:', error);
+                            alert(error.response?.data?.error || 'Error al actualizar la etapa');
+                            // Revertir valor en caso de error
+                            setStatusSelectValue((prev) => ({
+                              ...prev,
+                              [candidate._id]: candidate.status,
+                            }));
+                          } finally {
+                            setUpdatingStatusId(null);
+                          }
+                        }}
+                        disabled={updatingStatusId === candidate._id}
+                        className="ml-2 px-2 py-1 text-xs rounded-md bg-cap-black border border-cap-gray text-cap-gray-lightest font-semibold"
+                      >
+                        <option value="applied">Aplicado</option>
+                        <option value="screening">En revisión</option>
+                        <option value="evaluation">A pruebas</option>
+                        <option value="interview">Entrevista RH</option>
+                        <option value="interview-boss">Entrevista jefe</option>
+                        <option value="offer">Oferta</option>
+                        <option value="hired">Contratado</option>
+                        <option value="rejected">Rechazado</option>
+                        <option value="declined">Declinaron</option>
+                      </select>
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-2 text-sm">
@@ -294,6 +363,51 @@ export default function CandidatesPage() {
                       >
                         <Award className="w-4 h-4 mr-2" />
                         Promedio Técnico
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setCandidateForReferences(candidate);
+                          const existing =
+                            candidate.references && candidate.references.length > 0
+                              ? candidate.references
+                              : [
+                                  { name: '', company: '', phone: '', email: '' },
+                                  { name: '', company: '', phone: '', email: '' },
+                                ];
+                          // Asegurar dos referencias
+                          const normalizedRefs = [
+                            existing[0] || { name: '', company: '', phone: '', email: '' },
+                            existing[1] || { name: '', company: '', phone: '', email: '' },
+                          ];
+                          setReferences(normalizedRefs);
+                          setReferencesModalOpen(true);
+                        }}
+                        className="border-2 border-cap-gray text-cap-red hover:border-cap-red hover:text-cap-red font-bold transition-all"
+                      >
+                        Referencias personal
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setCandidateForTests(candidate);
+                          const existingTests =
+                            candidate.testNotes && candidate.testNotes.length > 0
+                              ? candidate.testNotes
+                              : [{ name: '', note: '' }];
+                          setTests(
+                            existingTests.map((t: any) => ({
+                              name: t.name || '',
+                              note: t.note || '',
+                            }))
+                          );
+                          setTestsModalOpen(true);
+                        }}
+                        className="border-2 border-cap-gray text-cap-red hover:border-cap-red hover:text-cap-red font-bold transition-all"
+                      >
+                        Nota pruebas
                       </Button>
                       <a
                         href={candidate.cvUrl}
@@ -665,6 +779,246 @@ export default function CandidatesPage() {
                   Guardar Puntaje
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Referencias personales */}
+      <Dialog open={referencesModalOpen} onOpenChange={setReferencesModalOpen}>
+        <DialogContent className="bg-cap-gray-dark border-2 border-cap-red text-white max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black text-white">
+              Referencias personales
+            </DialogTitle>
+            <DialogDescription className="text-cap-gray-lightest font-semibold text-base mt-4">
+              {candidateForReferences && (
+                <>
+                  <p className="mb-3">
+                    Completa los datos de hasta 2 referencias para{' '}
+                    <span className="font-bold text-white">
+                      {candidateForReferences.fullName}
+                    </span>
+                    .
+                  </p>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            {references.map((ref, index) => (
+              <div
+                key={index}
+                className="p-3 rounded-lg border border-cap-gray bg-cap-black space-y-2"
+              >
+                <p className="text-sm font-bold text-cap-gray-lightest mb-1">
+                  Referencia {index + 1}
+                </p>
+                <div className="grid md:grid-cols-2 gap-2">
+                  <Input
+                    placeholder="Nombre"
+                    value={ref.name}
+                    onChange={(e) => {
+                      const next = [...references];
+                      next[index] = { ...next[index], name: e.target.value };
+                      setReferences(next);
+                    }}
+                    className="bg-cap-gray-dark border-cap-gray text-white placeholder:text-cap-gray text-sm"
+                  />
+                  <Input
+                    placeholder="Empresa"
+                    value={ref.company}
+                    onChange={(e) => {
+                      const next = [...references];
+                      next[index] = { ...next[index], company: e.target.value };
+                      setReferences(next);
+                    }}
+                    className="bg-cap-gray-dark border-cap-gray text-white placeholder:text-cap-gray text-sm"
+                  />
+                  <Input
+                    placeholder="Teléfono"
+                    value={ref.phone}
+                    onChange={(e) => {
+                      const next = [...references];
+                      next[index] = { ...next[index], phone: e.target.value };
+                      setReferences(next);
+                    }}
+                    className="bg-cap-gray-dark border-cap-gray text-white placeholder:text-cap-gray text-sm"
+                  />
+                  <Input
+                    placeholder="Correo"
+                    value={ref.email}
+                    onChange={(e) => {
+                      const next = [...references];
+                      next[index] = { ...next[index], email: e.target.value };
+                      setReferences(next);
+                    }}
+                    className="bg-cap-gray-dark border-cap-gray text-white placeholder:text-cap-gray text-sm"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          <DialogFooter className="mt-6 flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setReferencesModalOpen(false);
+                setCandidateForReferences(null);
+              }}
+              className="flex-1 border-2 border-cap-gray text-cap-gray-lightest hover:border-cap-red hover:text-cap-red font-bold transition-all"
+            >
+              <X className="mr-2 h-4 w-4" />
+              Cancelar
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!candidateForReferences) return;
+                try {
+                  const cleanRefs = references.filter(
+                    (r) =>
+                      r.name.trim() ||
+                      r.company.trim() ||
+                      r.phone.trim() ||
+                      r.email.trim()
+                  );
+                  const response = await axios.put(
+                    `/api/candidates/${candidateForReferences._id}`,
+                    { references: cleanRefs }
+                  );
+                  if (response.data.success) {
+                    setcandidates((prev) =>
+                      prev.map((c) =>
+                        c._id === candidateForReferences._id
+                          ? { ...c, references: cleanRefs }
+                          : c
+                      )
+                    );
+                    setReferencesModalOpen(false);
+                    setCandidateForReferences(null);
+                  } else {
+                    alert('Error al guardar las referencias');
+                  }
+                } catch (error: any) {
+                  console.error('Error guardando referencias:', error);
+                  alert(error.response?.data?.error || 'Error al guardar referencias');
+                }
+              }}
+              className="flex-1 bg-cap-red hover:bg-cap-red-dark text-white font-black transition-all hover:scale-105"
+            >
+              Guardar referencias
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Nota de pruebas */}
+      <Dialog open={testsModalOpen} onOpenChange={setTestsModalOpen}>
+        <DialogContent className="bg-cap-gray-dark border-2 border-cap-red text-white max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black text-white">
+              Nota de pruebas
+            </DialogTitle>
+            <DialogDescription className="text-cap-gray-lightest font-semibold text-base mt-4">
+              {candidateForTests && (
+                <>
+                  <p className="mb-3">
+                    Registra las pruebas aplicadas a{' '}
+                    <span className="font-bold text-white">
+                      {candidateForTests.fullName}
+                    </span>
+                    .
+                  </p>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            {tests.map((test, index) => (
+              <div
+                key={index}
+                className="p-3 rounded-lg border border-cap-gray bg-cap-black space-y-2"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-sm font-bold text-cap-gray-lightest">
+                    Prueba {index + 1}
+                  </p>
+                </div>
+                <Input
+                  placeholder="Nombre de prueba"
+                  value={test.name}
+                  onChange={(e) => {
+                    const next = [...tests];
+                    next[index] = { ...next[index], name: e.target.value };
+                    setTests(next);
+                  }}
+                  className="bg-cap-gray-dark border-cap-gray text-white placeholder:text-cap-gray text-sm mb-2"
+                />
+                <Input
+                  placeholder="Notas u observaciones (opcional)"
+                  value={test.note}
+                  onChange={(e) => {
+                    const next = [...tests];
+                    next[index] = { ...next[index], note: e.target.value };
+                    setTests(next);
+                  }}
+                  className="bg-cap-gray-dark border-cap-gray text-white placeholder:text-cap-gray text-sm"
+                />
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                setTests((prev) => [...prev, { name: '', note: '' }])
+              }
+              className="w-full border-2 border-cap-gray text-cap-gray-lightest hover:border-cap-red hover:text-cap-red font-bold transition-all text-sm"
+            >
+              Agregar prueba
+            </Button>
+          </div>
+          <DialogFooter className="mt-6 flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setTestsModalOpen(false);
+                setCandidateForTests(null);
+              }}
+              className="flex-1 border-2 border-cap-gray text-cap-gray-lightest hover:border-cap-red hover:text-cap-red font-bold transition-all"
+            >
+              <X className="mr-2 h-4 w-4" />
+              Cancelar
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!candidateForTests) return;
+                try {
+                  const cleanTests = tests.filter((t) => t.name.trim());
+                  const response = await axios.put(
+                    `/api/candidates/${candidateForTests._id}`,
+                    { testNotes: cleanTests }
+                  );
+                  if (response.data.success) {
+                    setcandidates((prev) =>
+                      prev.map((c) =>
+                        c._id === candidateForTests._id
+                          ? { ...c, testNotes: cleanTests }
+                          : c
+                      )
+                    );
+                    setTestsModalOpen(false);
+                    setCandidateForTests(null);
+                  } else {
+                    alert('Error al guardar las notas de pruebas');
+                  }
+                } catch (error: any) {
+                  console.error('Error guardando notas de pruebas:', error);
+                  alert(error.response?.data?.error || 'Error al guardar notas de pruebas');
+                }
+              }}
+              className="flex-1 bg-cap-red hover:bg-cap-red-dark text-white font-black transition-all hover:scale-105"
+            >
+              Guardar notas
             </Button>
           </DialogFooter>
         </DialogContent>

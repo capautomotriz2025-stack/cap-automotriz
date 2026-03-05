@@ -26,12 +26,12 @@ export async function generateInterview(
   candidate: ICandidate,
   vacancy: IVacancy
 ): Promise<InterviewData> {
-  const questions: InterviewQuestion[] = [];
+  const baseQuestions: InterviewQuestion[] = [];
   
   // 1. Preguntas técnicas basadas en habilidades requeridas
   if (vacancy.requiredSkills && vacancy.requiredSkills.length > 0) {
     vacancy.requiredSkills.slice(0, 3).forEach(skill => {
-      questions.push({
+      baseQuestions.push({
         category: 'Técnicas',
         question: `¿Cuál es tu experiencia con ${skill}? ¿Puedes darnos un ejemplo de un proyecto donde lo hayas utilizado?`,
         purpose: `Evaluar conocimientos técnicos específicos en ${skill}`
@@ -42,7 +42,7 @@ export async function generateInterview(
   // 2. Preguntas de experiencia basadas en el CV genérico
   if (candidate.genericCV?.summary && candidate.genericCV.summary.length > 0) {
     const experienceSummary = candidate.genericCV.summary[0];
-    questions.push({
+    baseQuestions.push({
       category: 'Experiencia',
       question: `Según tu experiencia: ${experienceSummary}. ¿Puedes contarnos sobre un desafío específico que hayas enfrentado en tu carrera profesional?`,
       purpose: 'Evaluar experiencia práctica y capacidad de resolución de problemas'
@@ -51,7 +51,7 @@ export async function generateInterview(
   
   // 3. Preguntas basadas en el análisis de IA
   if (candidate.aiJustification) {
-    questions.push({
+    baseQuestions.push({
       category: 'Evaluación',
       question: `Tu perfil ha sido evaluado con un puntaje de ${candidate.aiScore}/100. ¿Qué aspectos de tu experiencia crees que te hacen un buen candidato para este puesto?`,
       purpose: 'Validar autoconocimiento y alineación con el perfil requerido'
@@ -60,7 +60,7 @@ export async function generateInterview(
   
   // 4. Preguntas específicas del puesto
   if (vacancy.mainFunctions) {
-    questions.push({
+    baseQuestions.push({
       category: 'Funciones del Puesto',
       question: `Este puesto requiere: ${vacancy.mainFunctions.substring(0, 200)}... ¿Cómo tu experiencia se alinea con estas responsabilidades?`,
       purpose: 'Evaluar comprensión del rol y capacidad de desempeño'
@@ -70,7 +70,7 @@ export async function generateInterview(
   // 5. Preguntas de soft skills basadas en áreas de evaluación
   if (vacancy.evaluationAreas && vacancy.evaluationAreas.length > 0) {
     vacancy.evaluationAreas.slice(0, 2).forEach(area => {
-      questions.push({
+      baseQuestions.push({
         category: 'Habilidades Blandas',
         question: `Una de las áreas clave de evaluación es ${area.area} (${area.percentage}%). ¿Puedes darnos un ejemplo de cómo has demostrado estas habilidades en tu trabajo anterior?`,
         purpose: `Evaluar ${area.area}`
@@ -79,24 +79,49 @@ export async function generateInterview(
   }
   
   // 6. Preguntas sobre motivación
-  questions.push({
+  baseQuestions.push({
     category: 'Motivación',
     question: `¿Qué te motiva a aplicar para el puesto de ${vacancy.title} en ${vacancy.department}?`,
     purpose: 'Evaluar motivación e interés genuino en el puesto'
   });
   
   // 7. Preguntas sobre trabajo en equipo
-  questions.push({
+  baseQuestions.push({
     category: 'Trabajo en Equipo',
     question: 'Cuéntanos sobre una situación donde tuviste que trabajar en equipo para resolver un problema complejo. ¿Cuál fue tu rol y cómo contribuiste?',
     purpose: 'Evaluar habilidades de colaboración y trabajo en equipo'
   });
   
   // 8. Preguntas sobre adaptabilidad
-  questions.push({
+  baseQuestions.push({
     category: 'Adaptabilidad',
     question: 'Describe una situación donde tuviste que adaptarte rápidamente a un cambio inesperado. ¿Cómo manejaste la situación?',
     purpose: 'Evaluar capacidad de adaptación y resiliencia'
+  });
+
+  // Asegurar 3 preguntas por categoría (ítem)
+  const questionsByCategory: Record<string, InterviewQuestion[]> = {};
+  baseQuestions.forEach((q) => {
+    if (!questionsByCategory[q.category]) {
+      questionsByCategory[q.category] = [];
+    }
+    questionsByCategory[q.category].push(q);
+  });
+
+  const questions: InterviewQuestion[] = [];
+  Object.entries(questionsByCategory).forEach(([category, qs]) => {
+    if (qs.length >= 3) {
+      questions.push(...qs.slice(0, 3));
+    } else {
+      // Duplicar en ciclo hasta llegar a 3 preguntas por categoría
+      let i = 0;
+      while (questionsByCategory[category].length < 3) {
+        const clone = { ...qs[i % qs.length] };
+        questionsByCategory[category].push(clone);
+        i += 1;
+      }
+      questions.push(...questionsByCategory[category]);
+    }
   });
   
   // Generar PDF

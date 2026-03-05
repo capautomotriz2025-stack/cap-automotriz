@@ -22,6 +22,9 @@ export default function ApplyPage({ params }: { params: { vacancyId: string } })
     fullName: '',
     email: '',
     phone: '',
+    profession: '',
+    experienceYears: '',
+    salaryExpectation: '',
     cv: null as File | null
   });
   const countryCodes = [
@@ -70,6 +73,15 @@ export default function ApplyPage({ params }: { params: { vacancyId: string } })
       formDataToSend.append('email', formData.email);
       // Concatenar el código de país seleccionado con el número
       formDataToSend.append('phone', `${selectedCode}${formData.phone}`);
+      if (formData.profession) {
+        formDataToSend.append('profession', formData.profession);
+      }
+      if (formData.experienceYears) {
+        formDataToSend.append('experienceYears', formData.experienceYears);
+      }
+      if (formData.salaryExpectation) {
+        formDataToSend.append('salaryExpectation', formData.salaryExpectation);
+      }
       formDataToSend.append('cv', formData.cv);
       
       const response = await axios.post('/api/applications', formDataToSend, {
@@ -162,15 +174,17 @@ export default function ApplyPage({ params }: { params: { vacancyId: string } })
                   <span className="text-sm">{vacancy.location}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm">
-                    {formatCurrency(vacancy.salary.min)} - {formatCurrency(vacancy.salary.max)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
                   <Briefcase className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm capitalize">{vacancy.employmentType}</span>
                 </div>
+                {(vacancy.requiredProfession || (vacancy.requiredProfessions && vacancy.requiredProfessions[0])) && (
+                  <div className="flex items-center gap-2">
+                    <Briefcase className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm">
+                      {vacancy.requiredProfession || (vacancy.requiredProfessions && vacancy.requiredProfessions[0])}
+                    </span>
+                  </div>
+                )}
               </div>
               
               <div className="pt-4">
@@ -266,6 +280,40 @@ export default function ApplyPage({ params }: { params: { vacancyId: string } })
                         placeholder="95697301"
                       />
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="profession">Profesión</Label>
+                    <Input
+                      id="profession"
+                      type="text"
+                      value={formData.profession}
+                      onChange={e => setFormData({ ...formData, profession: e.target.value })}
+                      placeholder={vacancy?.requiredProfession || (vacancy?.requiredProfessions && vacancy.requiredProfessions[0]) || 'Ej. Ingeniería en Sistemas'}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="experienceYears">Años de experiencia</Label>
+                    <Input
+                      id="experienceYears"
+                      type="number"
+                      min={0}
+                      value={formData.experienceYears}
+                      onChange={e => setFormData({ ...formData, experienceYears: e.target.value })}
+                      placeholder="Ej. 3"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="salaryExpectation">Aspiración salarial</Label>
+                    <Input
+                      id="salaryExpectation"
+                      type="text"
+                      value={formData.salaryExpectation}
+                      onChange={e => setFormData({ ...formData, salaryExpectation: e.target.value })}
+                      placeholder="Ej. 35,000 MXN mensuales"
+                    />
                   </div>
                   
                   <div className="space-y-2">

@@ -68,27 +68,27 @@ export function buildAgentPayloadFromVacancy(formData: VacancyFormDataLike): {
     description,
     criteria: {
       experience: {
-        weight: 25,
+        weight: 10,
         minYears: minY,
         importance: 'medium',
       },
       technicalSkills: {
-        weight: 30,
+        weight: 80,
         required: requiredSkills,
         desired: desiredSkills,
         certifications: [],
       },
       education: {
-        weight: 15,
+        weight: 10,
         minLevel: educationLevelToMinLevel[formData.educationLevel || ''] || 'none',
         required: !!formData.educationLevel,
       },
       softSkills: {
-        weight: 15,
+        weight: 0,
         keySkills: [],
       },
       progression: {
-        weight: 15,
+        weight: 0,
       },
     },
     thresholds,

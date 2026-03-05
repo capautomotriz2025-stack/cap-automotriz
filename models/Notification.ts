@@ -1,7 +1,13 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface INotification extends Document {
-  type: 'vacancy_deadline' | 'vacancy_closed' | 'candidate_applied' | 'system';
+  type:
+    | 'vacancy_deadline'
+    | 'vacancy_closed'
+    | 'candidate_applied'
+    | 'candidate_ai_finished'
+    | 'candidate_status_changed'
+    | 'system';
   title: string;
   message: string;
   relatedVacancyId?: mongoose.Types.ObjectId;
@@ -15,7 +21,14 @@ export interface INotification extends Document {
 const NotificationSchema = new Schema<INotification>({
   type: {
     type: String,
-    enum: ['vacancy_deadline', 'vacancy_closed', 'candidate_applied', 'system'],
+    enum: [
+      'vacancy_deadline',
+      'vacancy_closed',
+      'candidate_applied',
+      'candidate_ai_finished',
+      'candidate_status_changed',
+      'system',
+    ],
     required: true
   },
   title: { type: String, required: true },

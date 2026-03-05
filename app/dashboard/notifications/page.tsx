@@ -10,7 +10,13 @@ import Link from 'next/link';
 
 interface Notification {
   _id: string;
-  type: 'vacancy_deadline' | 'vacancy_closed' | 'candidate_applied' | 'system';
+  type:
+    | 'vacancy_deadline'
+    | 'vacancy_closed'
+    | 'candidate_applied'
+    | 'candidate_ai_finished'
+    | 'candidate_status_changed'
+    | 'system';
   title: string;
   message: string;
   relatedVacancyId?: string | { _id: string; title?: string };
@@ -101,6 +107,10 @@ export default function NotificationsPage() {
         return <Briefcase className="h-5 w-5 text-blue-500" />;
       case 'candidate_applied':
         return <Users className="h-5 w-5 text-green-500" />;
+      case 'candidate_ai_finished':
+        return <Bell className="h-5 w-5 text-cap-red" />;
+      case 'candidate_status_changed':
+        return <Users className="h-5 w-5 text-cap-red" />;
       default:
         return <AlertCircle className="h-5 w-5 text-cap-red" />;
     }
@@ -114,6 +124,10 @@ export default function NotificationsPage() {
         return 'border-blue-500/30 bg-blue-500/10';
       case 'candidate_applied':
         return 'border-green-500/30 bg-green-500/10';
+      case 'candidate_ai_finished':
+        return 'border-cap-red/40 bg-cap-red/10';
+      case 'candidate_status_changed':
+        return 'border-cap-red/40 bg-cap-red/10';
       default:
         return 'border-cap-red/30 bg-cap-red/10';
     }

@@ -55,7 +55,7 @@ export default function Home() {
               </Link>
               <Link href="/login">
                 <Button className="bg-racing-gradient hover:scale-105 transition-transform shadow-racing">
-                  Acceso Dashboard
+                  Log In
                 </Button>
               </Link>
             </div>
@@ -98,11 +98,6 @@ export default function Home() {
                     <ArrowRight className="ml-2 w-5 h-5" />
                   </Button>
                 </Link>
-                <Link href="/login">
-                  <Button size="lg" variant="outline" className="border-2 border-cap-red text-cap-red hover:bg-cap-red hover:text-white text-lg px-8 font-bold">
-                    Dashboard
-                  </Button>
-                </Link>
               </div>
 
               {/* Features list */}
@@ -121,8 +116,7 @@ export default function Home() {
               {[
                 { icon: Users, value: '10K+', label: 'Candidatos Analizados', color: 'red' },
                 { icon: Briefcase, value: '500+', label: 'Vacantes Activas', color: 'gray' },
-                { icon: Target, value: '95%', label: 'Precisión IA', color: 'red' },
-                { icon: TrendingUp, value: '3x', label: 'Más Rápido', color: 'gray' },
+                { icon: Target, value: '2K+', label: 'Cantidad de postulaciones', color: 'red' },
               ].map((stat, idx) => (
                 <Card key={idx} className="bg-cap-gray-dark/80 border-cap-gray backdrop-blur-sm hover:border-cap-red transition-all hover:scale-105">
                   <CardContent className="p-6">

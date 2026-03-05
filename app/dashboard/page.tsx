@@ -48,22 +48,22 @@ const KPICard = ({
   isPositive?: boolean;
 }) => {
   const isChangePositive = change < 0 ? !isPositive : isPositive;
-  const changeColor = isChangePositive ? 'text-green-500' : 'text-red-500';
+  const changeColor = isChangePositive ? 'text-emerald-600' : 'text-red-500';
   
   return (
-    <Card className="border-2 border-cap-gray bg-cap-gray-dark/80 backdrop-blur-sm hover:shadow-racing hover:scale-105 transition-all">
+    <Card className="border border-cap-gray/40 bg-slate-100 text-slate-900 shadow-sm hover:shadow-md hover:border-cap-red/50 transition-all">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-bold text-cap-gray-lightest">
+        <CardTitle className="text-sm font-bold text-slate-700">
           {title}
         </CardTitle>
-        <div className="w-10 h-10 bg-cap-gray rounded-lg flex items-center justify-center">
-          <Icon className="h-5 w-5 text-cap-gray-lightest" />
+        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
+          <Icon className="h-5 w-5 text-cap-red" />
         </div>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-black text-white mb-1">{value}</div>
+        <div className="text-2xl font-black text-slate-900 mb-1">{value}</div>
         {subtitle && (
-          <div className="text-xs text-cap-gray-lightest font-semibold mb-2">{subtitle}</div>
+          <div className="text-xs text-slate-600 font-semibold mb-2">{subtitle}</div>
         )}
         <div className={`flex items-center gap-1 text-sm font-bold ${changeColor}`}>
           {change > 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}

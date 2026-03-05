@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB, { isMongoDBAvailable } from '@/lib/mongodb';
 import Candidate from '@/models/Candidate';
+import Notification from '@/models/Notification';
 import { mockCandidates, usingMockData } from '@/lib/mock-data';
 import { 
   sendInterviewInvitation, 
@@ -104,6 +105,54 @@ export async function PUT(
     // Enviar email si cambió el estado a uno que requiere notificación
     if (body.status && oldCandidate && body.status !== oldCandidate.status) {
       await sendStatusChangeEmail(candidate, oldCandidate.status, body.status);
+    }
+
+    // Crear notificaciones adicionales:
+    // 1) Fin de análisis IA (cuando se recibe aiScore por primera vez)
+    if (
+      typeof body.aiScore === 'number' &&
+      (typeof oldCandidate.aiScore !== 'number' || oldCandidate.aiScore === 0)
+    ) {
+      try {
+        const vacancyTitle =
+          (candidate as any).vacancyId?.title || (candidate as any).vacancyTitle || 'N/A';
+        await Notification.create({
+          type: 'candidate_ai_finished',
+          title: 'Análisis IA completado',
+          message: `La IA terminó de analizar al candidato "${candidate.fullName}" para la vacante "${vacancyTitle}". Puntaje: ${candidate.aiScore}/100.`,
+          relatedCandidateId: candidate._id,
+          relatedVacancyId: (candidate as any).vacancyId?._id,
+          read: false,
+        });
+      } catch (notifError) {
+        console.error('Error creando notificación de análisis IA:', notifError);
+      }
+    }
+
+    // 2) Cambios de estado clave
+    const watchedStatuses: Record<string, string> = {
+      evaluation: 'A pruebas',
+      'interview-boss': 'A entrevista jefe',
+      offer: 'Acepto oferta',
+    };
+    if (body.status && oldCandidate && body.status !== oldCandidate.status) {
+      const label = watchedStatuses[body.status];
+      if (label) {
+        try {
+          const vacancyTitle =
+            (candidate as any).vacancyId?.title || (candidate as any).vacancyTitle || 'N/A';
+          await Notification.create({
+            type: 'candidate_status_changed',
+            title: `Candidato ${label}`,
+            message: `El candidato "${candidate.fullName}" ha pasado al estado "${label}" en el proceso de "${vacancyTitle}".`,
+            relatedCandidateId: candidate._id,
+            relatedVacancyId: (candidate as any).vacancyId?._id,
+            read: false,
+          });
+        } catch (notifError) {
+          console.error('Error creando notificación de cambio de estado:', notifError);
+        }
+      }
     }
     
     return NextResponse.json({ success: true, data: candidate });

@@ -159,11 +159,20 @@ async function generateGenericCVPDF(
       font: helveticaBoldFont,
       color: rgb(0, 0, 0),
     });
-    yPosition -= 40;
-    
-    // Información del candidato
-    page.drawText(candidate.fullName, {
+    yPosition -= 35;
+
+    // Sección: Datos personales
+    page.drawText('DATOS PERSONALES', {
       x: margin,
+      y: yPosition,
+      size: 14,
+      font: helveticaBoldFont,
+      color: rgb(0, 0, 0),
+    });
+    yPosition -= 25;
+
+    page.drawText(candidate.fullName, {
+      x: margin + 20,
       y: yPosition,
       size: 16,
       font: helveticaBoldFont,
@@ -172,7 +181,7 @@ async function generateGenericCVPDF(
     yPosition -= 25;
     
     page.drawText(candidate.email, {
-      x: margin,
+      x: margin + 20,
       y: yPosition,
       size: 12,
       font: helveticaFont,
@@ -181,16 +190,16 @@ async function generateGenericCVPDF(
     yPosition -= 20;
     
     page.drawText(candidate.phone, {
-      x: margin,
+      x: margin + 20,
       y: yPosition,
       size: 12,
       font: helveticaFont,
       color: rgb(0, 0, 0),
     });
-    yPosition -= 40;
-    
-    // RESUMEN PROFESIONAL
-    page.drawText('RESUMEN PROFESIONAL', {
+    yPosition -= 35;
+
+    // Sección: Experiencia laboral
+    page.drawText('EXPERIENCIA LABORAL', {
       x: margin,
       y: yPosition,
       size: 14,
@@ -199,7 +208,7 @@ async function generateGenericCVPDF(
     });
     yPosition -= 25;
     
-    // Puntos de resumen
+    // Puntos de resumen (usados como bullets de experiencia y logros)
     summary.forEach((point, index) => {
       if (yPosition < margin + 50) {
         // Nueva página si es necesario
@@ -223,8 +232,40 @@ async function generateGenericCVPDF(
       yPosition -= 5;
     });
     
-    yPosition -= 20;
-    
+    yPosition -= 25;
+
+    // Sección: Educación
+    if (yPosition < margin + 100) {
+      page = pdfDoc.addPage([595, 842]);
+      yPosition = page.getSize().height - margin;
+    }
+
+    page.drawText('EDUCACIÓN', {
+      x: margin,
+      y: yPosition,
+      size: 14,
+      font: helveticaBoldFont,
+      color: rgb(0, 0, 0),
+    });
+    yPosition -= 25;
+
+    const educationText = vacancy.educationLevel
+      ? `Nivel educativo requerido para la posición: ${vacancy.educationLevel}.`
+      : 'Nivel educativo: Información no especificada en la vacante.';
+    const educationLines = wrapText(educationText, width - 2 * margin - 20, 11, helveticaFont);
+    educationLines.forEach((line) => {
+      page.drawText(line, {
+        x: margin + 20,
+        y: yPosition,
+        size: 11,
+        font: helveticaFont,
+        color: rgb(0, 0, 0),
+      });
+      yPosition -= 15;
+    });
+
+    yPosition -= 25;
+
     // INFORMACIÓN DE LA POSICIÓN
     if (yPosition < margin + 100) {
       page = pdfDoc.addPage([595, 842]);

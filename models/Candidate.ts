@@ -45,6 +45,20 @@ export interface ICandidate extends Document {
     evaluatedAt?: Date;
   };
   
+  // Referencias personales
+  references?: Array<{
+    name: string;
+    company: string;
+    phone: string;
+    email: string;
+  }>;
+  
+  // Notas de pruebas adicionales
+  testNotes?: Array<{
+    name: string;
+    note?: string;
+  }>;
+  
   // Comunicación
   communications: Array<{
     type: 'email' | 'whatsapp' | 'call';
@@ -111,6 +125,18 @@ const CandidateSchema = new Schema<ICandidate>({
     evaluatedBy: { type: String },
     evaluatedAt: { type: Date }
   },
+  
+  references: [{
+    name: { type: String },
+    company: { type: String },
+    phone: { type: String },
+    email: { type: String },
+  }],
+  
+  testNotes: [{
+    name: { type: String, required: true },
+    note: { type: String },
+  }],
   
   communications: [{
     type: { type: String, enum: ['email', 'whatsapp', 'call'], required: true },

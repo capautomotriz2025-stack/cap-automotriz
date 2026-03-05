@@ -5,11 +5,15 @@ import Link from 'next/link';
 import axios from 'axios';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Download, Eye, ArrowRight } from 'lucide-react';
+import { FileText, Download, Eye, ArrowRight, Search, Bot, Loader2 } from 'lucide-react';
 
 export default function CVsByProcessPage() {
   const [loading, setLoading] = useState(true);
   const [candidatesByProcess, setCandidatesByProcess] = useState<Record<string, any[]>>({});
+  const [searchTerm, setSearchTerm] = useState('');
+  const [aiQuery, setAiQuery] = useState('');
+  const [aiAnswer, setAiAnswer] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     fetchCandidatesByProcess();
@@ -61,9 +65,9 @@ export default function CVsByProcessPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-4xl font-black text-white">CVs por Proceso de Reclutamiento</h1>
+        <h1 className="text-4xl font-black text-white">BD Candidatos</h1>
         <p className="text-cap-gray-lightest mt-2 text-lg font-semibold">
-          Todos los CVs de candidatos clasificados por proceso
+          Todos los CVs de candidatos clasificados por proceso. Busca por nombre de vacante, candidatos ideales o profesiones.
         </p>
       </div>
 
@@ -71,7 +75,7 @@ export default function CVsByProcessPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-2xl font-black text-white">CVs por Proceso de Reclutamiento</CardTitle>
+          <CardTitle className="text-2xl font-black text-white">CVs por Proceso de Reclutamiento</CardTitle>
               <CardDescription className="text-base mt-1 text-cap-gray-lightest font-semibold">
                 Todos los CVs de candidatos clasificados por proceso
               </CardDescription>
@@ -80,6 +84,86 @@ export default function CVsByProcessPage() {
           </div>
         </CardHeader>
         <CardContent>
+          {/* Buscador simple + Agente Sandy */}
+          <div className="mb-6 grid gap-4 md:grid-cols-[2fr,3fr]">
+            <div className="space-y-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-cap-gray" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Filtrar por nombre de vacante o candidato..."
+                  className="w-full pl-9 pr-3 py-2 rounded-md border-2 border-cap-gray bg-cap-black text-sm text-white placeholder:text-cap-gray font-semibold"
+                />
+              </div>
+              <p className="text-xs text-cap-gray-lightest font-semibold">
+                El filtro aplica sobre el nombre del proceso y el nombre del candidato.
+              </p>
+            </div>
+            <Card className="border border-cap-gray bg-cap-black/60">
+              <CardHeader className="pb-2 flex flex-row items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-racing-gradient flex items-center justify-center">
+                  <Bot className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-black text-white">Sandy – Agente IA de BD Candidatos</CardTitle>
+                  <CardDescription className="text-xs text-cap-gray-lightest font-semibold">
+                    Pregúntame por nombre de vacante, candidatos ideales o profesiones y te ayudaré a encontrar procesos relevantes.
+                  </CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!aiQuery.trim()) return;
+                    setAiLoading(true);
+                    setAiAnswer('');
+                    try {
+                      const res = await axios.post('/api/ai/search-candidates', { query: aiQuery.trim() });
+                      if (res.data.success) {
+                        setAiAnswer(res.data.answer || '');
+                      } else {
+                        setAiAnswer('No pude encontrar resultados para tu consulta. Intenta ser más específico.');
+                      }
+                    } catch (error) {
+                      console.error('Error en búsqueda IA de BD candidatos:', error);
+                      setAiAnswer('Ocurrió un error al procesar la búsqueda. Intenta nuevamente más tarde.');
+                    } finally {
+                      setAiLoading(false);
+                    }
+                  }}
+                  className="space-y-2"
+                >
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={aiQuery}
+                      onChange={(e) => setAiQuery(e.target.value)}
+                      placeholder='Ej: "vacantes de Ingeniería con candidatos ideales"'
+                      className="flex-1 px-3 py-2 rounded-md border border-cap-gray bg-cap-gray-dark text-xs text-white placeholder:text-cap-gray font-semibold"
+                    />
+                    <button
+                      type="submit"
+                      disabled={aiLoading}
+                      className="px-3 py-2 rounded-md bg-racing-gradient text-xs font-bold text-white hover:scale-105 transition-transform disabled:opacity-50"
+                    >
+                      {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Preguntar'}
+                    </button>
+                  </div>
+                </form>
+                {aiAnswer && (
+                  <div className="mt-1 p-2 rounded-md bg-cap-gray-dark/70 border border-cap-gray">
+                    <p className="text-xs text-cap-gray-lightest whitespace-pre-line font-semibold">
+                      {aiAnswer}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
           {Object.keys(candidatesByProcess).length === 0 ? (
             <div className="text-center py-12 text-cap-gray">
               <FileText className="h-12 w-12 mx-auto mb-4 text-cap-gray" />
@@ -87,7 +171,19 @@ export default function CVsByProcessPage() {
             </div>
           ) : (
             <div className="space-y-6">
-              {Object.entries(candidatesByProcess).map(([processName, candidates]) => (
+              {Object.entries(candidatesByProcess)
+                .filter(([processName, candidates]) => {
+                  if (!searchTerm.trim()) return true;
+                  const term = searchTerm.toLowerCase();
+                  const matchesProcess = processName.toLowerCase().includes(term);
+                  const matchesCandidate = (candidates as any[]).some((c) =>
+                    String(c.fullName || '')
+                      .toLowerCase()
+                      .includes(term)
+                  );
+                  return matchesProcess || matchesCandidate;
+                })
+                .map(([processName, candidates]) => (
                 <div key={processName} className="border-2 border-cap-gray rounded-lg p-4 bg-cap-black/50">
                   <div className="flex items-center justify-between mb-4">
                     <div>
