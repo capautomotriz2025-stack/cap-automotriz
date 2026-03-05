@@ -423,32 +423,30 @@ export default function CandidatesPage() {
                         variant="outline"
                         size="sm"
                         onClick={async () => {
-                          if (!candidate.genericCV || !candidate.genericCV.pdfUrl) {
-                            setGeneratingCV(candidate._id);
-                            try {
-                              const response = await axios.post(`/api/candidates/${candidate._id}/generate-cv`);
-                              if (response.data.success) {
-                                // Actualizar el candidato en la lista
-                                const updatedCandidates = candidates.map(c => 
-                                  c._id === candidate._id 
-                                    ? { ...c, genericCV: response.data.data }
-                                    : c
-                                );
-                                setcandidates(updatedCandidates);
-                                // Abrir el CV genérico
-                                if (response.data.data.pdfUrl) {
-                                  window.open(response.data.data.pdfUrl, '_blank');
-                                }
+                          // Siempre regenerar el CV genérico para asegurar formato actualizado
+                          setGeneratingCV(candidate._id);
+                          try {
+                            const response = await axios.post(
+                              `/api/candidates/${candidate._id}/generate-cv`
+                            );
+                            if (response.data.success) {
+                              const updatedCandidates = candidates.map((c) =>
+                                c._id === candidate._id
+                                  ? { ...c, genericCV: response.data.data }
+                                  : c
+                              );
+                              setcandidates(updatedCandidates);
+                              if (response.data.data.pdfUrl) {
+                                window.open(response.data.data.pdfUrl, '_blank');
                               }
-                            } catch (error) {
-                              console.error('Error generando CV genérico:', error);
+                            } else {
                               alert('Error al generar CV genérico');
-                            } finally {
-                              setGeneratingCV(null);
                             }
-                          } else {
-                            // Si ya existe, solo abrirlo
-                            window.open(candidate.genericCV.pdfUrl, '_blank');
+                          } catch (error) {
+                            console.error('Error generando CV genérico:', error);
+                            alert('Error al generar CV genérico');
+                          } finally {
+                            setGeneratingCV(null);
                           }
                         }}
                         disabled={generatingCV === candidate._id}
@@ -470,56 +468,42 @@ export default function CandidatesPage() {
                         variant="outline"
                         size="sm"
                         onClick={async () => {
-                          // Si no existe el PDF, generarlo primero
-                          if (!candidate.genericCV?.pdfUrl) {
-                            setGeneratingCV(candidate._id);
-                            try {
-                              const response = await axios.post(`/api/candidates/${candidate._id}/generate-cv`);
-                              if (response.data.success && response.data.data.pdfUrl) {
-                                // Descargar el archivo usando fetch para obtener el blob
-                                const pdfUrl = response.data.data.pdfUrl;
-                                const pdfResponse = await fetch(pdfUrl);
-                                const blob = await pdfResponse.blob();
-                                const url = window.URL.createObjectURL(blob);
-                                const link = document.createElement('a');
-                                link.href = url;
-                                link.download = `CV-Generico-${candidate.fullName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-                                window.URL.revokeObjectURL(url);
-                                
-                                // Actualizar el candidato
-                                const updatedCandidates = candidates.map(c => 
-                                  c._id === candidate._id 
-                                    ? { ...c, genericCV: response.data.data }
-                                    : c
-                                );
-                                setcandidates(updatedCandidates);
-                              }
-                            } catch (error) {
-                              console.error('Error generando CV genérico:', error);
-                              alert('Error al generar CV genérico');
-                            } finally {
-                              setGeneratingCV(null);
-                            }
-                          } else {
-                            // Si ya existe, descargarlo usando fetch para obtener el blob
-                            try {
-                              const pdfResponse = await fetch(candidate.genericCV.pdfUrl);
+                          // Regenerar siempre el PDF antes de descargar para asegurar el formato estándar
+                          setGeneratingCV(candidate._id);
+                          try {
+                            const response = await axios.post(
+                              `/api/candidates/${candidate._id}/generate-cv`
+                            );
+                            if (response.data.success && response.data.data.pdfUrl) {
+                              const pdfUrl = response.data.data.pdfUrl;
+                              const pdfResponse = await fetch(pdfUrl);
                               const blob = await pdfResponse.blob();
                               const url = window.URL.createObjectURL(blob);
                               const link = document.createElement('a');
                               link.href = url;
-                              link.download = `CV-Generico-${candidate.fullName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+                              link.download = `CV-Generico-${candidate.fullName.replace(
+                                /[^a-zA-Z0-9]/g,
+                                '_'
+                              )}.pdf`;
                               document.body.appendChild(link);
                               link.click();
                               document.body.removeChild(link);
                               window.URL.revokeObjectURL(url);
-                            } catch (error) {
-                              console.error('Error descargando CV genérico:', error);
-                              alert('Error al descargar CV genérico');
+
+                              const updatedCandidates = candidates.map((c) =>
+                                c._id === candidate._id
+                                  ? { ...c, genericCV: response.data.data }
+                                  : c
+                              );
+                              setcandidates(updatedCandidates);
+                            } else {
+                              alert('Error al generar CV genérico');
                             }
+                          } catch (error) {
+                            console.error('Error generando/descargando CV genérico:', error);
+                            alert('Error al generar o descargar CV genérico');
+                          } finally {
+                            setGeneratingCV(null);
                           }
                         }}
                         disabled={generatingCV === candidate._id}

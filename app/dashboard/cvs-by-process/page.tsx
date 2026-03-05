@@ -12,7 +12,9 @@ export default function CVsByProcessPage() {
   const [candidatesByProcess, setCandidatesByProcess] = useState<Record<string, any[]>>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [aiQuery, setAiQuery] = useState('');
-  const [aiAnswer, setAiAnswer] = useState('');
+  const [aiAnswer, setAiAnswer] = useState(
+    'Hola, soy Sandy, tu agente IA de BD Candidatos. Cuéntame qué tipo de vacante, candidato ideal o profesión buscas y te ayudo a encontrar los procesos más relevantes.'
+  );
   const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
