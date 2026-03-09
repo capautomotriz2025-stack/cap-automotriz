@@ -5,7 +5,7 @@ import Link from 'next/link';
 import axios from 'axios';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
+import {
   Briefcase,
   Plus,
   ArrowRight,
@@ -15,6 +15,7 @@ import {
   BarChart3,
   AlertCircle
 } from 'lucide-react';
+import SandySearch from '@/components/SandySearch';
 
 export default function InicioPage() {
   const [loading, setLoading] = useState(true);
@@ -51,6 +52,9 @@ export default function InicioPage() {
 
   return (
     <div className="space-y-8">
+      {/* Sandy – Agente IA */}
+      <SandySearch />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

@@ -694,11 +694,21 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
         <Card>
           <CardHeader>
             <CardTitle>Descriptor de Puesto</CardTitle>
-            <CardDescription>Adjunte el documento descriptor del puesto</CardDescription>
+            <CardDescription>Descripción del puesto y documento adjunto</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="jobDescriptor">Adjuntar Archivo</Label>
+              <Label htmlFor="mainFunctions">Descripción / Principales Funciones</Label>
+              <Textarea
+                id="mainFunctions"
+                placeholder="Describa brevemente las principales funciones del puesto..."
+                value={formData.mainFunctions}
+                onChange={(e) => setFormData({ ...formData, mainFunctions: e.target.value })}
+                rows={5}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="jobDescriptor">Adjuntar Archivo (PDF)</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="jobDescriptor"

@@ -128,7 +128,7 @@ export default function ApplyPage({ params }: { params: { vacancyId: string } })
             </p>
             <Button 
               className="w-full" 
-              onClick={() => router.push('/')}
+              onClick={() => router.push('/vacancies')}
             >
               Ver Más Vacantes
             </Button>

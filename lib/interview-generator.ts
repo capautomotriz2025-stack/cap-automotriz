@@ -378,26 +378,21 @@ function wrapText(text: string, maxWidth: number, fontSize: number, font: any): 
   const words = text.split(' ');
   const lines: string[] = [];
   let currentLine = '';
-  
-  // Aproximación: Helvetica tiene ~0.6 * fontSize de ancho por carácter
-  const charWidth = fontSize * 0.6;
-  const maxChars = Math.floor(maxWidth / charWidth);
-  
+
   words.forEach(word => {
     const testLine = currentLine + (currentLine ? ' ' : '') + word;
-    
-    // Si la línea excede el ancho máximo, empezar una nueva línea
-    if (testLine.length > maxChars && currentLine) {
+
+    if (font.widthOfTextAtSize(testLine, fontSize) > maxWidth && currentLine) {
       lines.push(currentLine);
       currentLine = word;
     } else {
       currentLine = testLine;
     }
   });
-  
+
   if (currentLine) {
     lines.push(currentLine);
   }
-  
+
   return lines;
 }

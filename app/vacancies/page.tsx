@@ -140,8 +140,8 @@ export default function PublicVacanciesPage() {
 
       {/* Stats Section CAP */}
       <section className="container mx-auto px-4 -mt-10 relative z-10">
-        <div className="grid md:grid-cols-4 gap-6 max-w-6xl mx-auto">
-          <Card className="border-2 border-cap-red/30 bg-cap-gray-dark/80 backdrop-blur-sm shadow-racing-xl hover:scale-105 transition-transform">
+        <div className="flex flex-wrap justify-center gap-6 max-w-6xl mx-auto">
+          <Card className="w-full md:w-64 border-2 border-cap-red/30 bg-cap-gray-dark/80 backdrop-blur-sm shadow-racing-xl hover:scale-105 transition-transform">
             <CardContent className="pt-6 text-center">
               <div className="w-12 h-12 bg-racing-gradient rounded-xl flex items-center justify-center mx-auto mb-3 shadow-racing">
                 <Briefcase className="w-6 h-6 text-white" />
@@ -153,7 +153,7 @@ export default function PublicVacanciesPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-2 border-cap-gray bg-cap-gray-dark/80 backdrop-blur-sm shadow-racing-xl hover:scale-105 transition-transform">
+          <Card className="w-full md:w-64 border-2 border-cap-gray bg-cap-gray-dark/80 backdrop-blur-sm shadow-racing-xl hover:scale-105 transition-transform">
             <CardContent className="pt-6 text-center">
               <div className="w-12 h-12 bg-cap-gray rounded-xl flex items-center justify-center mx-auto mb-3">
                 <Building2 className="w-6 h-6 text-cap-gray-lightest" />
