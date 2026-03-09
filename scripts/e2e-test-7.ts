@@ -25,14 +25,18 @@ import * as path from 'path';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const API_BASE = `${BASE_URL}/api`;
-const TEST_NUMBER = process.env.TEST_NUMBER ? parseInt(process.env.TEST_NUMBER, 10) : 8;
+const TEST_NUMBER = process.env.TEST_NUMBER ? parseInt(process.env.TEST_NUMBER, 10) : 13;
 const TEST_NAME = `test ${TEST_NUMBER}`;
 const SOLICITUD_TITLE = `Solicitud ${TEST_NAME}`;
 
 const CV_PATH =
   process.env.CV_PATH ||
   process.argv.find((a) => a.startsWith('--cv='))?.slice(5) ||
-  '';
+  'c:/Users/fiona/Downloads/cv_2025_us-1.pdf'; // PDF real de Luciano por default
+
+const USE_REAL_PDF = fs.existsSync(CV_PATH);
+const CANDIDATE_NAME = USE_REAL_PDF ? 'Luciano Mastrangelo' : `Candidato ${TEST_NAME}`;
+const CANDIDATE_EMAIL = USE_REAL_PDF ? 'luciano.mastran@gmail.com' : `candidato-${TEST_NUMBER}@test.com`;
 
 const educationLevelToMinLevel: Record<
   string,
@@ -241,9 +245,9 @@ async function main() {
     const FormData = require('form-data');
     const form = new FormData();
     form.append('vacancyId', solicitudId);
-    form.append('fullName', `Candidato ${TEST_NAME}`);
-    form.append('email', 'luciano.mastran@gmail.com');
-    form.append('phone', '+5215512345678');
+    form.append('fullName', CANDIDATE_NAME);
+    form.append('email', CANDIDATE_EMAIL);
+    form.append('phone', USE_REAL_PDF ? '1136936750' : '+5215512345678');
     form.append('cv', cvBuffer, { filename: `cv-${TEST_NAME.replace(/\s/g, '-')}.pdf`, contentType: 'application/pdf' });
 
     const applicationRes = await api.post('/applications', form, {

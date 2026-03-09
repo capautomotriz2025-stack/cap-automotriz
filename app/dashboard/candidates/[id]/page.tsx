@@ -53,22 +53,25 @@ export default function CandidateDetailPage() {
   };
 
   const handleGenerateCV = async () => {
-    if (!candidate.genericCV) {
-      setGeneratingCV(true);
-      try {
-        const response = await axios.post(`/api/candidates/${params.id}/generate-cv`);
-        if (response.data.success) {
-          setCandidate({ ...candidate, genericCV: response.data.data });
-        }
-      } catch (error) {
-        console.error('Error generando CV genérico:', error);
-        alert('Error al generar CV genérico');
-      } finally {
-        setGeneratingCV(false);
-      }
-    }
     if (candidate.genericCV?.pdfUrl) {
       window.open(candidate.genericCV.pdfUrl, '_blank');
+      return;
+    }
+    setGeneratingCV(true);
+    try {
+      const response = await axios.post(`/api/candidates/${params.id}/generate-cv`);
+      if (response.data.success) {
+        const cvData = response.data.data;
+        setCandidate({ ...candidate, genericCV: cvData });
+        if (cvData?.pdfUrl) {
+          window.open(cvData.pdfUrl, '_blank');
+        }
+      }
+    } catch (error) {
+      console.error('Error generando CV genérico:', error);
+      alert('Error al generar CV genérico');
+    } finally {
+      setGeneratingCV(false);
     }
   };
 
