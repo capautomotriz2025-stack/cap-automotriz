@@ -6,12 +6,147 @@ import { put } from '@vercel/blob';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import openai from '@/lib/openai';
 
 export interface GenericCVData {
-  summary: string[]; // 5 puntos de resumen
+  summary: string[];
   technicalTestScore?: number;
   generatedAt: Date;
   pdfUrl?: string;
+}
+
+interface ExtractedCVData {
+  yearsOfExperience: number;
+  currentRole: string;
+  previousJobs: Array<{ role: string; company: string; period: string }>;
+  education: Array<{ degree: string; institution: string; period: string }>;
+  skills: string[];
+  languages: string[];
+  profileSummary: string;
+  nationality: string;
+  dateOfBirth: string;
+  address: string;
+}
+
+/**
+ * Extrae datos estructurados del CV usando OpenAI.
+ * Si OpenAI no está disponible, usa fallback con regex mejorado.
+ */
+async function extractCVDataWithAI(cvText: string): Promise<ExtractedCVData> {
+  const fallback: ExtractedCVData = {
+    yearsOfExperience: 0,
+    currentRole: 'Profesional',
+    previousJobs: [],
+    education: [],
+    skills: [],
+    languages: [],
+    profileSummary: 'Perfil profesional no disponible.',
+    nationality: '',
+    dateOfBirth: '',
+    address: '',
+  };
+
+  if (!process.env.OPENAI_API_KEY) return fallbackExtract(cvText);
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [
+        {
+          role: 'system',
+          content:
+            'Eres un extractor de datos de CVs. Devuelve SOLO un JSON válido sin texto adicional.',
+        },
+        {
+          role: 'user',
+          content: `Extrae todos los datos del siguiente CV y devuelve este JSON exacto:
+{
+  "yearsOfExperience": <número total de años de experiencia laboral>,
+  "currentRole": "<cargo actual y empresa>",
+  "previousJobs": [
+    { "role": "<cargo>", "company": "<empresa>", "period": "<fechas>" }
+  ],
+  "education": [
+    { "degree": "<título>", "institution": "<institución>", "period": "<fechas>" }
+  ],
+  "skills": ["<habilidad1>", "<habilidad2>", ...],
+  "languages": ["<idioma nivel>", ...],
+  "profileSummary": "<resumen profesional de 2-3 líneas>",
+  "nationality": "<nacionalidad o vacío>",
+  "dateOfBirth": "<fecha de nacimiento o vacío>",
+  "address": "<dirección o vacío>"
+}
+
+CV:
+${cvText}`,
+        },
+      ],
+      temperature: 0.1,
+      max_tokens: 1200,
+    });
+
+    const raw = completion.choices[0].message.content || '{}';
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) return fallbackExtract(cvText);
+    const parsed = JSON.parse(match[0]);
+    // Fusionar con fallback para asegurar que todos los campos existan
+    return { ...fallback, ...parsed };
+  } catch (err) {
+    console.error('⚠️ extractCVDataWithAI error, usando fallback:', err);
+    return fallbackExtract(cvText);
+  }
+}
+
+/** Extracción de emergencia sin IA (mejorada sobre la versión anterior) */
+function fallbackExtract(cvText: string): ExtractedCVData {
+  const lines = cvText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+
+  // Años de experiencia: sumar rangos de fechas
+  const years = (() => {
+    const m = cvText.match(/(\d{4})\s*[-–]\s*(\d{4}|present|actualidad)/gi) || [];
+    let total = 0;
+    m.forEach(r => {
+      const parts = r.match(/(\d{4})\s*[-–]\s*(\d{4}|present|actualidad)/i);
+      if (parts) {
+        const start = parseInt(parts[1]);
+        const end = /present|actual/i.test(parts[2]) ? new Date().getFullYear() : parseInt(parts[2]);
+        total += Math.max(0, end - start);
+      }
+    });
+    return total || 0;
+  })();
+
+  // Trabajos: buscar líneas con @ o patrones de empresa
+  const jobs: Array<{ role: string; company: string; period: string }> = [];
+  lines.forEach(line => {
+    const m = line.match(/^@?([A-Z][A-Za-z\s]+(?:S\.A\.|SRL|Corp|Inc|Ltd)?)\s*$/);
+    if (m) jobs.push({ role: '', company: m[1].trim(), period: '' });
+  });
+
+  // Educación
+  const eduKeywords = [/licenciatura/i, /ingenier[íi]/i, /t[eé]cnico/i, /universidad/i, /bachelor/i, /university/i, /technician/i];
+  const education = lines
+    .filter(l => eduKeywords.some(re => re.test(l)))
+    .slice(0, 3)
+    .map(l => ({ degree: l, institution: '', period: '' }));
+
+  const skills = (cvText.match(/\b(React|Node\.js|TypeScript|MongoDB|Docker|NestJS|NextJS|Kubernetes|AWS|Python|SQL|PHP|Laravel|Angular|Vue|GraphQL|Redis|MySQL|PostgreSQL|Git|CI\/CD|TDD|Scrum|Agile)\b/gi) || [])
+    .map(s => s.toLowerCase())
+    .filter((s, i, arr) => arr.indexOf(s) === i)
+    .slice(0, 10);
+
+  return {
+    yearsOfExperience: years,
+    currentRole: jobs[0] ? `Profesional en ${jobs[0].company}` : 'Profesional',
+    previousJobs: jobs.slice(0, 5),
+    education,
+    skills,
+    languages: [],
+    profileSummary: '',
+    nationality: '',
+    dateOfBirth: '',
+    address: '',
+  };
 }
 
 /**
@@ -21,683 +156,271 @@ export async function generateGenericCV(
   candidate: ICandidate,
   vacancy: IVacancy
 ): Promise<GenericCVData> {
-  // Extraer información del CV original
   const cvText = candidate.cvText || '';
-  
-  // Generar los 5 puntos de resumen
+
+  // Extraer datos estructurados con IA
+  const extracted = await extractCVDataWithAI(cvText);
+
   const summary: string[] = [];
-  
+
   // 1. Experiencia profesional
-  const experienceSummary = extractExperience(cvText, candidate, vacancy);
-  summary.push(experienceSummary);
-  
-  // 2. Profesión y años de experiencia
-  const professionSummary = extractProfession(cvText, candidate, vacancy);
-  summary.push(professionSummary);
-  
-  // 3. Trabajos anteriores (resumen)
-  const previousJobsSummary = extractPreviousJobs(cvText, candidate);
-  summary.push(previousJobsSummary);
-  
+  const expYears = extracted.yearsOfExperience;
+  summary.push(
+    expYears > 0
+      ? `Profesional con ${expYears} años de experiencia. ${extracted.currentRole ? 'Actualmente: ' + extracted.currentRole + '.' : ''} ${extracted.profileSummary || ''}`.trim()
+      : `${extracted.currentRole || 'Profesional en el área'}. ${extracted.profileSummary || ''}`.trim()
+  );
+
+  // 2. Habilidades técnicas
+  summary.push(
+    extracted.skills.length > 0
+      ? `Habilidades técnicas: ${extracted.skills.slice(0, 8).join(', ')}.`
+      : `Habilidades en ${vacancy.requiredProfession || 'el área'}.`
+  );
+
+  // 3. Trabajos anteriores
+  const jobsList = extracted.previousJobs
+    .map(j => `${j.role ? j.role + ' en ' : ''}${j.company}${j.period ? ' (' + j.period + ')' : ''}`)
+    .join('; ');
+  summary.push(
+    jobsList
+      ? `Experiencia laboral: ${jobsList}.`
+      : 'Experiencia laboral en el sector.'
+  );
+
   // 4. Puntaje del CV original
-  const cvScoreSummary = `Puntaje de evaluación del CV: ${candidate.aiScore}/100 - Clasificación: ${candidate.aiClassification}`;
-  summary.push(cvScoreSummary);
-  
-  // 5. Puntaje de pruebas técnicas (se agregará manualmente por admin)
-  const technicalTestSummary = candidate.genericCV?.technicalTestScore 
-    ? `Puntaje de pruebas técnicas: ${candidate.genericCV.technicalTestScore}/100`
-    : 'Puntaje de pruebas técnicas: Pendiente de evaluación';
-  summary.push(technicalTestSummary);
-  
-  // Generar PDF
+  summary.push(
+    `Puntaje de evaluación del CV: ${candidate.aiScore}/100 - Clasificación: ${candidate.aiClassification}`
+  );
+
+  // 5. Puntaje de pruebas técnicas
+  summary.push(
+    candidate.genericCV?.technicalTestScore
+      ? `Puntaje de pruebas técnicas: ${candidate.genericCV.technicalTestScore}/100`
+      : 'Puntaje de pruebas técnicas: Pendiente de evaluación'
+  );
+
   const pdfUrl = await generateGenericCVPDF(
     candidate,
     vacancy,
     summary,
-    candidate.genericCV?.technicalTestScore,
-    cvText
+    extracted,
+    candidate.genericCV?.technicalTestScore
   );
-  
+
   return {
     summary,
     technicalTestScore: candidate.genericCV?.technicalTestScore,
     generatedAt: new Date(),
-    pdfUrl
+    pdfUrl,
   };
 }
 
 /**
- * Extrae información de experiencia del CV
- */
-function extractExperience(cvText: string, candidate: ICandidate, vacancy: IVacancy): string {
-  // Buscar años de experiencia en el CV
-  const yearsMatch = cvText.match(/(\d+)\s*(años?|years?|yr)/i);
-  const years = yearsMatch ? parseInt(yearsMatch[1]) : 0;
-  
-  // Buscar palabras clave de experiencia
-  const experienceKeywords = ['experiencia', 'experience', 'trabajo', 'work', 'empleo', 'empleado'];
-  const hasExperience = experienceKeywords.some(keyword => 
-    cvText.toLowerCase().includes(keyword.toLowerCase())
-  );
-  
-  if (years > 0) {
-    return `Experiencia profesional de ${years} años en el área, con conocimientos sólidos en ${vacancy.requiredProfession || 'el sector'}`;
-  } else if (hasExperience) {
-    return `Experiencia profesional en el área, con conocimientos en ${vacancy.requiredProfession || 'el sector'}`;
-  } else {
-    return `Candidato con potencial en ${vacancy.requiredProfession || 'el área'}, buscando oportunidad de desarrollo profesional`;
-  }
-}
-
-/**
- * Extrae información de profesión
- */
-function extractProfession(cvText: string, candidate: ICandidate, vacancy: IVacancy): string {
-  const profession = vacancy.requiredProfession || 'Profesional';
-  
-  // Intentar extraer años de experiencia del CV
-  const yearsMatch = cvText.match(/(\d+)\s*(años?|years?|yr)/i);
-  const years = yearsMatch ? parseInt(yearsMatch[1]) : 0;
-  
-  if (years > 0) {
-    return `Profesión: ${profession} con ${years} años de experiencia en el campo`;
-  } else {
-    return `Profesión: ${profession}, en proceso de desarrollo profesional`;
-  }
-}
-
-/**
- * Extrae información de trabajos anteriores
- */
-function extractPreviousJobs(cvText: string, candidate: ICandidate): string {
-  // Buscar patrones comunes de trabajos en el CV
-  const jobPatterns = [
-    /(desarrollador|developer|ingeniero|engineer|analista|analyst|diseñador|designer|gerente|manager)/gi,
-    /(empresa|company|corporación|corporation)/gi
-  ];
-  
-  const foundJobs: string[] = [];
-  jobPatterns.forEach(pattern => {
-    const matches = cvText.match(pattern);
-    if (matches) {
-      foundJobs.push(...matches.slice(0, 3));
-    }
-  });
-  
-  if (foundJobs.length > 0) {
-    const uniqueJobs = [...new Set(foundJobs)].slice(0, 3);
-    return `Trabajos anteriores: Experiencia en ${uniqueJobs.join(', ')} y roles relacionados`;
-  } else {
-    return 'Trabajos anteriores: Experiencia profesional en el sector';
-  }
-}
-
-/**
- * Genera el PDF del CV genérico usando pdf-lib (compatible con Next.js)
- * Usa la misma lógica de guardado que los CVs originales
+ * Genera el PDF del CV genérico usando pdf-lib
  */
 async function generateGenericCVPDF(
   candidate: ICandidate,
   vacancy: IVacancy,
   summary: string[],
-  technicalTestScore?: number,
-  cvText?: string
+  extracted: ExtractedCVData,
+  technicalTestScore?: number
 ): Promise<string> {
-  try {
-    // Crear nuevo documento PDF
-    const pdfDoc = await PDFDocument.create();
-    
-    // Obtener fuentes estándar (incluidas en pdf-lib, no requieren archivos del sistema)
-    const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const helveticaBoldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    const helveticaObliqueFont = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
-    
-    // Crear página
-    let page = pdfDoc.addPage([595, 842]); // A4 size
-    const { width, height } = page.getSize();
-    const margin = 50;
-    let yPosition = height - margin;
+  const pdfDoc = await PDFDocument.create();
+  const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const helveticaBoldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const helveticaObliqueFont = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
 
-    // Encabezado: Nombre completo (azul, centrado)
-    const fullName = sanitizeForPdf(candidate.fullName || 'NOMBRE COMPLETO APELLIDOS');
-    const nameSize = 20;
-    const nameWidth = helveticaBoldFont.widthOfTextAtSize(fullName.toUpperCase(), nameSize);
-    page.drawText(fullName.toUpperCase(), {
-      x: (width - nameWidth) / 2,
-      y: yPosition,
-      size: nameSize,
-      font: helveticaBoldFont,
-      color: rgb(0, 0.3, 0.7),
-    });
-    yPosition -= 40;
+  const margin = 50;
+  let page = pdfDoc.addPage([595, 842]);
+  const { width } = page.getSize();
+  let y = page.getSize().height - margin;
 
-    // PERFIL PROFESIONAL
-    page.drawText('PERFIL PROFESIONAL', {
-      x: margin,
-      y: yPosition,
-      size: 12,
-      font: helveticaBoldFont,
-      color: rgb(0, 0.3, 0.7),
-    });
-    yPosition -= 18;
+  const blue = rgb(0, 0.3, 0.7);
+  const black = rgb(0, 0, 0);
+  const gray = rgb(0.5, 0.5, 0.5);
 
-    const resumenEvaluacion = sanitizeForPdf(
-      summary[0] || 'Resumen de evaluación del candidato no disponible.'
-    );
-    const notaPerfil = sanitizeForPdf(summary[3] || '');
-    const notaPruebas = sanitizeForPdf(summary[4] || '');
-
-    // Resumen de evaluación del candidato (con salto de línea limpio)
-    const resumenLabel = 'Resumen de evaluación del candidato: ';
-    const resumenLabelWidth = helveticaBoldFont.widthOfTextAtSize(resumenLabel, 10);
-    const resumenValueX = margin + resumenLabelWidth;
-
-    page.drawText(resumenLabel, {
-      x: margin,
-      y: yPosition,
-      size: 10,
-      font: helveticaBoldFont,
-      color: rgb(0, 0, 0),
-    });
-
-    const resumenLines = wrapText(
-      resumenEvaluacion,
-      width - resumenValueX - margin,
-      10,
-      helveticaFont
-    );
-    let resumenY = yPosition;
-    resumenLines.forEach((line, idx) => {
-      page.drawText(line, {
-        x: resumenValueX,
-        y: resumenY,
-        size: 10,
-        font: helveticaFont,
-        color: rgb(0, 0, 0),
-      });
-      resumenY -= 14;
-    });
-    yPosition = resumenY;
-
-    // Nota evaluación de perfil (también con wrapping)
-    if (notaPerfil) {
-      const notaLabel = 'Nota evaluación de perfil: ';
-      const notaLabelWidth = helveticaBoldFont.widthOfTextAtSize(notaLabel, 10);
-      const notaValueX = margin + notaLabelWidth;
-
-      page.drawText(notaLabel, {
-        x: margin,
-        y: yPosition,
-        size: 10,
-        font: helveticaBoldFont,
-        color: rgb(0, 0, 0),
-      });
-
-      const notaLines = wrapText(
-        notaPerfil,
-        width - notaValueX - margin,
-        10,
-        helveticaFont
-      );
-      let notaY = yPosition;
-      notaLines.forEach((line) => {
-        page.drawText(line, {
-          x: notaValueX,
-          y: notaY,
-          size: 10,
-          font: helveticaFont,
-          color: rgb(0, 0, 0),
-        });
-        notaY -= 14;
-      });
-      yPosition = notaY;
-    }
-
-    // Nota de pruebas
-    const notaPruebasTexto =
-      technicalTestScore != null
-        ? `${technicalTestScore}/100`
-        : 'Pendiente de evaluación';
-    page.drawText('Nota de pruebas: ', {
-      x: margin,
-      y: yPosition,
-      size: 10,
-      font: helveticaBoldFont,
-      color: rgb(0, 0, 0),
-    });
-    page.drawText(notaPruebasTexto, {
-      x: margin + 110,
-      y: yPosition,
-      size: 10,
-      font: helveticaFont,
-      color: rgb(0, 0, 0),
-    });
-    yPosition -= 24;
-
-    // DATOS PERSONALES
-    page.drawText('DATOS PERSONALES', {
-      x: margin,
-      y: yPosition,
-      size: 12,
-      font: helveticaBoldFont,
-      color: rgb(0, 0.3, 0.7),
-    });
-    yPosition -= 18;
-
-    const salarioTexto = sanitizeForPdf(
-      vacancy.salary && vacancy.salary.min && vacancy.salary.max
-        ? `${vacancy.salary.min} - ${vacancy.salary.max} ${vacancy.salary.currency || ''}`
-        : 'No especificado'
-    );
-
-    const { dateOfBirth, nationality, address } = extractPersonalDataFromCV(cvText || '');
-
-    // Etiquetas en negrita + valor
-    const labelValuePairs: Array<[string, string]> = [
-      ['Fecha de nacimiento:', sanitizeForPdf(dateOfBirth || 'No disponible')],
-      ['Nacionalidad:', sanitizeForPdf(nationality || 'No disponible')],
-      ['Dirección:', sanitizeForPdf(address || vacancy.location || 'No disponible')],
-      ['Teléfono:', sanitizeForPdf(candidate.phone || 'No disponible')],
-      ['Correo electrónico:', sanitizeForPdf(candidate.email || 'No disponible')],
-      ['Aspiración salarial:', salarioTexto],
-    ];
-
-    labelValuePairs.forEach(([label, value]) => {
-      page.drawText(label, {
-        x: margin,
-        y: yPosition,
-        size: 10,
-        font: helveticaBoldFont,
-        color: rgb(0, 0, 0),
-      });
-      page.drawText(value, {
-        x: margin + 130,
-        y: yPosition,
-        size: 10,
-        font: helveticaFont,
-        color: rgb(0, 0, 0),
-      });
-      yPosition -= 14;
-    });
-    yPosition -= 10;
-
-    // EXPERIENCIA LABORAL
-    page.drawText('EXPERIENCIA LABORAL', {
-      x: margin,
-      y: yPosition,
-      size: 12,
-      font: helveticaBoldFont,
-      color: rgb(0, 0.3, 0.7),
-    });
-    yPosition -= 18;
-
-    const experienciaTexto = sanitizeForPdf(summary[2] || summary[0] || '');
-    page.drawText('Trabajos anteriores: ', {
-      x: margin,
-      y: yPosition,
-      size: 10,
-      font: helveticaBoldFont,
-      color: rgb(0, 0, 0),
-    });
-    const expLines = wrapText(
-      experienciaTexto.replace(/^Trabajos anteriores:\s*/i, ''),
-      width - 2 * margin - 130,
-      10,
-      helveticaFont
-    );
-    let expY = yPosition;
-    expLines.forEach((line) => {
-      if (expY < margin + 80) {
-        page = pdfDoc.addPage([595, 842]);
-        expY = page.getSize().height - margin;
-        page.drawText('Trabajos anteriores: ', {
-          x: margin,
-          y: expY,
-          size: 10,
-          font: helveticaBoldFont,
-          color: rgb(0, 0, 0),
-        });
-        expY -= 14;
-      }
-      page.drawText(line, {
-        x: margin + 130,
-        y: expY,
-        size: 10,
-        font: helveticaFont,
-        color: rgb(0, 0, 0),
-      });
-      expY -= 14;
-    });
-    yPosition = expY - 2;
-    yPosition -= 16;
-
-    // FORMACIÓN PROFESIONAL
-    if (yPosition < margin + 100) {
+  function checkPage(needed = 40) {
+    if (y < margin + needed) {
       page = pdfDoc.addPage([595, 842]);
-      yPosition = page.getSize().height - margin;
+      y = page.getSize().height - margin;
     }
-
-    page.drawText('FORMACIÓN PROFESIONAL', {
-      x: margin,
-      y: yPosition,
-      size: 12,
-      font: helveticaBoldFont,
-      color: rgb(0, 0.3, 0.7),
-    });
-    yPosition -= 18;
-
-    const profesiones: string[] = [];
-    // Intentar extraer formación directamente del CV original
-    if (cvText) {
-      const fromCv = extractEducationFromCV(cvText);
-      profesiones.push(...fromCv.map((p) => sanitizeForPdf(p)));
-    }
-    if (vacancy.requiredProfession) profesiones.push(sanitizeForPdf(vacancy.requiredProfession));
-    if (Array.isArray(vacancy.requiredProfessions)) {
-      vacancy.requiredProfessions.forEach((p) => {
-        if (p && !profesiones.includes(p)) profesiones.push(p);
-      });
-    }
-
-    if (profesiones.length === 0) {
-      profesiones.push('Profesión no especificada');
-    }
-
-    profesiones.slice(0, 3).forEach((prof) => {
-      page.drawText('Profesión: ', {
-        x: margin,
-        y: yPosition,
-        size: 10,
-        font: helveticaBoldFont,
-        color: rgb(0, 0, 0),
-      });
-      page.drawText(prof, {
-        x: margin + 75,
-        y: yPosition,
-        size: 10,
-        font: helveticaFont,
-        color: rgb(0, 0, 0),
-      });
-      yPosition -= 14;
-      page.drawText('Año: ', {
-        x: margin,
-        y: yPosition,
-        size: 10,
-        font: helveticaBoldFont,
-        color: rgb(0, 0, 0),
-      });
-      page.drawText('No disponible', {
-        x: margin + 50,
-        y: yPosition,
-        size: 10,
-        font: helveticaFont,
-        color: rgb(0, 0, 0),
-      });
-      yPosition -= 16;
-    });
-
-    // REFERENCIAS PERSONALES
-    if (yPosition < margin + 120) {
-      page = pdfDoc.addPage([595, 842]);
-      yPosition = page.getSize().height - margin;
-    }
-
-    page.drawText('REFERENCIAS PERSONALES', {
-      x: margin,
-      y: yPosition,
-      size: 12,
-      font: helveticaBoldFont,
-      color: rgb(0, 0.3, 0.7),
-    });
-    yPosition -= 18;
-
-    const refs = (candidate as any).references || [];
-    const maxRefs = refs.length > 0 ? refs.slice(0, 2) : [{}, {}];
-
-    maxRefs.forEach((ref: any, index: number) => {
-      const nombre = sanitizeForPdf(ref.name || 'No disponible');
-      const empresa = sanitizeForPdf(ref.company || 'No disponible');
-      const telefono = sanitizeForPdf(ref.phone || 'No disponible');
-      const correo = sanitizeForPdf(ref.email || 'No disponible');
-
-      page.drawText('Nombre: ', {
-        x: margin,
-        y: yPosition,
-        size: 10,
-        font: helveticaBoldFont,
-        color: rgb(0, 0, 0),
-      });
-      page.drawText(nombre, {
-        x: margin + 60,
-        y: yPosition,
-        size: 10,
-        font: helveticaFont,
-        color: rgb(0, 0, 0),
-      });
-      yPosition -= 14;
-      page.drawText('Empresa: ', {
-        x: margin,
-        y: yPosition,
-        size: 10,
-        font: helveticaBoldFont,
-        color: rgb(0, 0, 0),
-      });
-      page.drawText(empresa, {
-        x: margin + 65,
-        y: yPosition,
-        size: 10,
-        font: helveticaFont,
-        color: rgb(0, 0, 0),
-      });
-      yPosition -= 14;
-      page.drawText('Teléfono: ', {
-        x: margin,
-        y: yPosition,
-        size: 10,
-        font: helveticaBoldFont,
-        color: rgb(0, 0, 0),
-      });
-      page.drawText(telefono, {
-        x: margin + 70,
-        y: yPosition,
-        size: 10,
-        font: helveticaFont,
-        color: rgb(0, 0, 0),
-      });
-      yPosition -= 14;
-      page.drawText('Correo: ', {
-        x: margin,
-        y: yPosition,
-        size: 10,
-        font: helveticaBoldFont,
-        color: rgb(0, 0, 0),
-      });
-      page.drawText(correo, {
-        x: margin + 55,
-        y: yPosition,
-        size: 10,
-        font: helveticaFont,
-        color: rgb(0, 0, 0),
-      });
-      yPosition -= 18;
-    });
-    
-    // Footer
-    const footerText = `Generado el ${new Date().toLocaleDateString('es-MX')}`;
-    const footerWidth = helveticaObliqueFont.widthOfTextAtSize(footerText, 10);
-    page.drawText(footerText, {
-      x: (width - footerWidth) / 2,
-      y: margin,
-      size: 10,
-      font: helveticaObliqueFont,
-      color: rgb(0.5, 0.5, 0.5),
-    });
-    
-    // Generar PDF como buffer
-    const pdfBytes = await pdfDoc.save();
-    const pdfBuffer = Buffer.from(pdfBytes);
-    
-    // Usar la misma lógica de guardado que los CVs originales
-    const fileName = `generic-cv-${candidate._id}-${Date.now()}.pdf`;
-    let pdfUrl: string;
-    
-    // Si está en producción (Vercel), usar Blob Storage (igual que los CVs originales)
-    if (process.env.BLOB_READ_WRITE_TOKEN) {
-      console.log('☁️  Subiendo CV genérico a Vercel Blob:', fileName);
-      const blob = await put(`cvs/${fileName}`, pdfBuffer, {
-        access: 'public',
-        contentType: 'application/pdf',
-      });
-      pdfUrl = blob.url;
-      console.log('✅ CV genérico subido a Blob:', pdfUrl);
-    } else {
-      // En desarrollo local, guardar en /public/uploads (fallback)
-      console.log('💾 Guardando CV genérico localmente:', fileName);
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'cvs');
-      try {
-        await mkdir(uploadDir, { recursive: true });
-      } catch (err) {
-        // Directory already exists
-      }
-      const filePath = path.join(uploadDir, fileName);
-      await writeFile(filePath, pdfBuffer);
-      pdfUrl = `/uploads/cvs/${fileName}`;
-      console.log('✅ CV genérico guardado localmente');
-    }
-    
-    return pdfUrl;
-  } catch (error) {
-    console.error('Error generando PDF:', error);
-    throw error;
   }
+
+  function drawSection(title: string) {
+    checkPage(50);
+    y -= 6;
+    page.drawText(sanitizeForPdf(title), { x: margin, y, size: 12, font: helveticaBoldFont, color: blue });
+    y -= 4;
+    // Línea separadora
+    page.drawLine({ start: { x: margin, y }, end: { x: width - margin, y }, thickness: 0.5, color: blue });
+    y -= 14;
+  }
+
+  function drawLabelValue(label: string, value: string, labelWidth = 140) {
+    checkPage(16);
+    page.drawText(sanitizeForPdf(label), { x: margin, y, size: 10, font: helveticaBoldFont, color: black });
+    const wrapped = wrapText(value, width - margin - margin - labelWidth, 10, helveticaFont);
+    let lineY = y;
+    wrapped.forEach((line, i) => {
+      if (i > 0) { checkPage(14); lineY = y; }
+      page.drawText(sanitizeForPdf(line), { x: margin + labelWidth, y: lineY, size: 10, font: helveticaFont, color: black });
+      y -= 14;
+    });
+  }
+
+  function drawText(text: string, size = 10, font = helveticaFont, color = black, indent = 0) {
+    const wrapped = wrapText(text, width - margin * 2 - indent, size, font);
+    wrapped.forEach(line => {
+      checkPage(size + 4);
+      page.drawText(sanitizeForPdf(line), { x: margin + indent, y, size, font, color });
+      y -= size + 4;
+    });
+  }
+
+  // ── ENCABEZADO ──
+  const fullName = sanitizeForPdf(candidate.fullName.toUpperCase());
+  const nameW = helveticaBoldFont.widthOfTextAtSize(fullName, 22);
+  page.drawText(fullName, { x: (width - nameW) / 2, y, size: 22, font: helveticaBoldFont, color: blue });
+  y -= 28;
+
+  if (extracted.currentRole) {
+    const role = sanitizeForPdf(extracted.currentRole);
+    const roleW = helveticaFont.widthOfTextAtSize(role, 11);
+    page.drawText(role, { x: (width - roleW) / 2, y, size: 11, font: helveticaFont, color: gray });
+    y -= 20;
+  }
+
+  // Línea de contacto
+  const contactParts = [candidate.email, candidate.phone].filter(Boolean).map(sanitizeForPdf);
+  if (contactParts.length > 0) {
+    const contact = contactParts.join('  |  ');
+    const cW = helveticaFont.widthOfTextAtSize(contact, 9);
+    page.drawText(contact, { x: (width - cW) / 2, y, size: 9, font: helveticaFont, color: gray });
+    y -= 24;
+  }
+
+  // ── PERFIL PROFESIONAL ──
+  drawSection('PERFIL PROFESIONAL');
+  if (extracted.profileSummary) {
+    drawText(extracted.profileSummary, 10, helveticaFont, black);
+    y -= 4;
+  }
+  drawLabelValue('Nota evaluación perfil:', summary[3] || '');
+  drawLabelValue('Nota de pruebas:', technicalTestScore != null ? `${technicalTestScore}/100` : 'Pendiente de evaluación');
+  y -= 4;
+
+  // ── DATOS PERSONALES ──
+  drawSection('DATOS PERSONALES');
+  drawLabelValue('Fecha de nacimiento:', extracted.dateOfBirth || 'No disponible');
+  drawLabelValue('Nacionalidad:', extracted.nationality || 'No disponible');
+  drawLabelValue('Dirección:', extracted.address || vacancy.location || 'No disponible');
+  drawLabelValue('Teléfono:', candidate.phone || 'No disponible');
+  drawLabelValue('Correo electrónico:', candidate.email || 'No disponible');
+  if (vacancy.salary?.min) {
+    drawLabelValue('Aspiración salarial:', `${vacancy.salary.min} - ${vacancy.salary.max} ${vacancy.salary.currency || 'MXN'}`);
+  }
+  if (extracted.languages.length > 0) {
+    drawLabelValue('Idiomas:', extracted.languages.join(', '));
+  }
+  y -= 4;
+
+  // ── EXPERIENCIA LABORAL ──
+  drawSection('EXPERIENCIA LABORAL');
+  if (extracted.previousJobs.length > 0) {
+    extracted.previousJobs.forEach(job => {
+      checkPage(30);
+      const jobTitle = sanitizeForPdf(`${job.role ? job.role + ' – ' : ''}${job.company}${job.period ? '  ('+job.period+')' : ''}`);
+      page.drawText(jobTitle, { x: margin, y, size: 10, font: helveticaBoldFont, color: black });
+      y -= 14;
+    });
+  } else {
+    drawText(summary[2] || 'Experiencia en el sector.', 10, helveticaFont, black);
+  }
+  if (extracted.skills.length > 0) {
+    y -= 4;
+    drawLabelValue('Habilidades técnicas:', extracted.skills.slice(0, 10).join(', '));
+  }
+  y -= 4;
+
+  // ── FORMACIÓN PROFESIONAL ──
+  drawSection('FORMACIÓN PROFESIONAL');
+  if (extracted.education.length > 0) {
+    extracted.education.forEach(edu => {
+      checkPage(28);
+      drawText(`${edu.degree}${edu.institution ? ' – ' + edu.institution : ''}${edu.period ? ' (' + edu.period + ')' : ''}`, 10, helveticaBoldFont, black);
+    });
+  } else {
+    const profs = [vacancy.requiredProfession, ...(vacancy.requiredProfessions || [])].filter(Boolean);
+    profs.slice(0, 3).forEach(p => drawText(p!, 10, helveticaFont, black));
+  }
+  y -= 4;
+
+  // ── REFERENCIAS PERSONALES ──
+  drawSection('REFERENCIAS PERSONALES');
+  const refs = (candidate as any).references || [];
+  if (refs.length > 0) {
+    refs.slice(0, 4).forEach((ref: any) => {
+      checkPage(40);
+      drawText(`${ref.name || ''}${ref.company ? ' – ' + ref.company : ''}`, 10, helveticaBoldFont, black);
+      if (ref.phone) drawLabelValue('Teléfono:', ref.phone, 70);
+      if (ref.email) drawLabelValue('Email:', ref.email, 70);
+      y -= 4;
+    });
+  } else {
+    drawText('Referencias disponibles a solicitud.', 10, helveticaObliqueFont, gray);
+  }
+
+  // ── FOOTER ──
+  const footer = `Generado el ${new Date().toLocaleDateString('es-MX')}`;
+  const fW = helveticaObliqueFont.widthOfTextAtSize(footer, 9);
+  page.drawText(footer, { x: (width - fW) / 2, y: margin, size: 9, font: helveticaObliqueFont, color: gray });
+
+  // Guardar PDF
+  const pdfBytes = await pdfDoc.save();
+  const pdfBuffer = Buffer.from(pdfBytes);
+  const fileName = `generic-cv-${candidate._id}-${Date.now()}.pdf`;
+  let pdfUrl: string;
+
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    const blob = await put(`cvs/${fileName}`, pdfBuffer, { access: 'public', contentType: 'application/pdf' });
+    pdfUrl = blob.url;
+  } else {
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'cvs');
+    try { await mkdir(uploadDir, { recursive: true }); } catch {}
+    await writeFile(path.join(uploadDir, fileName), pdfBuffer);
+    pdfUrl = `/uploads/cvs/${fileName}`;
+  }
+
+  return pdfUrl;
 }
 
-/**
- * Función auxiliar para dividir texto en líneas
- * Usa una aproximación basada en caracteres (Helvetica ~0.6 * fontSize por carácter)
- */
+/** Mide el ancho real con la fuente para un salto de línea preciso */
 function wrapText(text: string, maxWidth: number, fontSize: number, font: any): string[] {
-  const sanitized = sanitizeForPdf(text);
-  const words = sanitized.split(' ');
+  const words = sanitizeForPdf(text).split(' ');
   const lines: string[] = [];
-  let currentLine = '';
-  
-  // Aproximación: Helvetica tiene ~0.6 * fontSize de ancho por carácter
-  const charWidth = fontSize * 0.6;
-  const maxChars = Math.floor(maxWidth / charWidth);
-  
+  let current = '';
+
   words.forEach(word => {
-    const testLine = currentLine + (currentLine ? ' ' : '') + word;
-    
-    // Si la línea excede el ancho máximo, empezar una nueva línea
-    if (testLine.length > maxChars && currentLine) {
-      lines.push(currentLine);
-      currentLine = word;
+    const test = current + (current ? ' ' : '') + word;
+    if (font.widthOfTextAtSize(test, fontSize) > maxWidth && current) {
+      lines.push(current);
+      current = word;
     } else {
-      currentLine = testLine;
+      current = test;
     }
   });
-  
-  if (currentLine) {
-    lines.push(currentLine);
-  }
-  
+  if (current) lines.push(current);
   return lines;
 }
 
-/**
- * Intenta extraer líneas de formación académica del CV original
- */
-function extractEducationFromCV(cvText: string): string[] {
-  const lines = cvText
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-
-  const educationKeywords = [
-    /licenciatura/i,
-    /ingenier[íi]a/i,
-    /ingeniero/i,
-    /maestr[ií]a/i,
-    /master/i,
-    /doctorado/i,
-    /bachiller/i,
-    /t[eé]cnico/i,
-    /universidad/i,
-  ];
-
-  const found: string[] = [];
-  for (const line of lines) {
-    if (educationKeywords.some((re) => re.test(line))) {
-      if (!found.includes(line)) {
-        found.push(line);
-      }
-    }
-    if (found.length >= 3) break;
-  }
-
-  return found.slice(0, 3);
-}
-
-/**
- * Extrae datos personales del CV original (fecha de nacimiento, nacionalidad, dirección)
- */
-function extractPersonalDataFromCV(cvText: string): {
-  dateOfBirth?: string;
-  nationality?: string;
-  address?: string;
-} {
-  const lines = cvText
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-
-  let dateOfBirth: string | undefined;
-  let nationality: string | undefined;
-  let address: string | undefined;
-
-  for (const line of lines) {
-    const lower = line.toLowerCase();
-
-    if (!dateOfBirth && /fecha de nacimiento/i.test(lower)) {
-      const m = line.match(
-        /fecha de nacimiento\s*[:\-]?\s*([0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4})/i
-      );
-      if (m) dateOfBirth = m[1];
-    }
-
-    if (!nationality && /nacionalidad/i.test(lower)) {
-      const m = line.match(/nacionalidad\s*[:\-]?\s*(.+)$/i);
-      if (m) nationality = m[1].trim();
-    }
-
-    if (!address && /direcci[oó]n/i.test(lower)) {
-      const m = line.match(/direcci[oó]n\s*[:\-]?\s*(.+)$/i);
-      if (m) address = m[1].trim();
-    }
-
-    if (dateOfBirth && nationality && address) break;
-  }
-
-  return { dateOfBirth, nationality, address };
-}
-
-/**
- * Elimina caracteres que no puede representar la fuente estándar (WinAnsi)
- * para evitar errores como "WinAnsi cannot encode ..."
- */
+/** Elimina caracteres fuera de WinAnsi */
 function sanitizeForPdf(text: string): string {
   if (!text) return '';
-  const allowedExtra = 'áéíóúÁÉÍÓÚñÑüÜ¿¡´`ªºçÇ';
   const result: string[] = [];
   for (const ch of text) {
     const code = ch.codePointAt(0) ?? 32;
-    const isBasicLatin = code >= 32 && code <= 126;
-    const isLatin1 = code >= 160 && code <= 255;
-    if (isBasicLatin || isLatin1 || allowedExtra.includes(ch)) {
-      result.push(ch);
-    }
-    // Si no es representable, se omite silenciosamente
+    if ((code >= 32 && code <= 126) || (code >= 160 && code <= 255)) result.push(ch);
   }
   return result.join('');
 }

@@ -2,14 +2,12 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
-// Función para cargar .env.local
 function loadEnvFile() {
   const possiblePaths = [
     resolve(process.cwd(), '.env.local'),
     resolve(__dirname, '..', '.env.local'),
     resolve(__dirname, '../..', '.env.local'),
   ];
-  
   for (const envPath of possiblePaths) {
     try {
       const envContent = readFileSync(envPath, 'utf-8');
@@ -17,20 +15,15 @@ function loadEnvFile() {
         const trimmedLine = line.trim();
         if (trimmedLine && !trimmedLine.startsWith('#') && trimmedLine.includes('=')) {
           const [key, ...valueParts] = trimmedLine.split('=');
-          const value = valueParts.join('=').replace(/^["']|["']$/g, ''); // Remover comillas
-          if (key && value) {
-            process.env[key.trim()] = value.trim();
-          }
+          const value = valueParts.join('=').replace(/^["']|["']$/g, '');
+          if (key && value) process.env[key.trim()] = value.trim();
         }
       });
       console.log('✅ Variables de .env.local cargadas desde:', envPath);
       return;
-    } catch (error) {
-      // Continuar con el siguiente path
-    }
+    } catch {}
   }
-  console.log('⚠️  No se encontró .env.local en:', possiblePaths.join(', '));
-  console.log('📂 Directorio actual:', process.cwd());
+  console.log('⚠️  No se encontró .env.local');
 }
 
 loadEnvFile();
@@ -39,408 +32,451 @@ import mongoose from 'mongoose';
 import Vacancy from '../models/Vacancy';
 import Candidate from '../models/Candidate';
 
-// Usar la URI de la variable de entorno (BD_MONGODB_URI o MONGODB_URI) o la local por defecto
-const MONGODB_URI = process.env.BD_MONGODB_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/recruitment';
+const MONGODB_URI =
+  process.env.BD_MONGODB_URI ||
+  process.env.MONGODB_URI ||
+  'mongodb://localhost:27017/recruitment';
 
-const vacanciesData = [
+// ─────────────────────────────────────────────
+// VACANTES (usando el schema nuevo completo)
+// ─────────────────────────────────────────────
+const vacanciesData: any[] = [
+  // ── SOLICITUD pendiente (no publicada aún) ──
   {
-    title: 'Desarrollador Full Stack Senior',
-    description: 'Buscamos un desarrollador full stack con experiencia en React y Node.js para liderar proyectos de alto impacto.',
-    optimizedDescription: 'Únete a nuestro equipo como Desarrollador Full Stack Senior y lidera la innovación tecnológica. Trabajarás en proyectos desafiantes utilizando las últimas tecnologías como React, Next.js, Node.js y MongoDB. Ofrecemos un ambiente colaborativo, crecimiento profesional y excelentes beneficios.',
+    applicantName: 'Carlos Méndez',
     department: 'Tecnología',
-    location: 'Ciudad de México (Híbrido)',
-    salary: {
-      min: 45000,
-      max: 65000,
-      currency: 'MXN'
-    },
-    requiredSkills: ['React', 'Node.js', 'TypeScript', 'MongoDB', 'Git'],
-    desiredSkills: ['Next.js', 'Docker', 'AWS', 'GraphQL'],
-    experienceYears: 5,
-    educationLevel: 'Licenciatura en Ingeniería o afín',
-    employmentType: 'full-time',
-    status: 'published',
-    publishedAt: new Date()
-  },
-  {
-    title: 'Diseñador UX/UI',
-    description: 'Diseñador creativo con pasión por crear experiencias de usuario excepcionales.',
-    optimizedDescription: 'Buscamos un Diseñador UX/UI talentoso que transforme ideas en experiencias digitales memorables. Trabajarás con equipos multidisciplinarios diseñando interfaces intuitivas y atractivas. Requisitos: dominio de Figma, Adobe XD, conocimiento de Design Thinking y experiencia en diseño responsive.',
-    department: 'Diseño',
-    location: 'Guadalajara (Remoto)',
-    salary: {
-      min: 30000,
-      max: 45000,
-      currency: 'MXN'
-    },
-    requiredSkills: ['Figma', 'Adobe XD', 'UI Design', 'UX Research', 'Prototipado'],
-    desiredSkills: ['Ilustración', 'Motion Design', 'HTML/CSS'],
-    experienceYears: 3,
-    educationLevel: 'Licenciatura en Diseño Gráfico o afín',
-    employmentType: 'full-time',
-    status: 'published',
-    publishedAt: new Date()
-  },
-  {
-    title: 'Gerente de Recursos Humanos',
-    description: 'Profesional en RH con experiencia en reclutamiento, desarrollo organizacional y gestión del talento.',
-    optimizedDescription: 'Posición estratégica como Gerente de Recursos Humanos. Liderarás todos los procesos de gestión del talento: reclutamiento, onboarding, capacitación, evaluación de desempeño y clima laboral. Buscamos un líder con visión estratégica, habilidades de comunicación excepcionales y experiencia en transformación organizacional.',
-    department: 'Recursos Humanos',
-    location: 'Monterrey (Presencial)',
-    salary: {
-      min: 50000,
-      max: 70000,
-      currency: 'MXN'
-    },
-    requiredSkills: ['Reclutamiento', 'Desarrollo Organizacional', 'Legislación Laboral', 'Liderazgo', 'Coaching'],
-    desiredSkills: ['Six Sigma', 'HRIS', 'People Analytics'],
-    experienceYears: 7,
-    educationLevel: 'Licenciatura en Psicología, Administración o afín',
-    employmentType: 'full-time',
-    status: 'published',
-    publishedAt: new Date()
-  },
-  {
-    title: 'Analista de Datos Junior',
-    description: 'Posición inicial para analista de datos con conocimientos en Python y SQL.',
-    optimizedDescription: 'Excelente oportunidad para iniciar tu carrera como Analista de Datos. Trabajarás con grandes volúmenes de información, crearás dashboards y apoyarás en la toma de decisiones basada en datos. Ambiente de aprendizaje continuo con mentores experimentados. Ideal para recién egresados con pasión por los datos.',
-    department: 'Análisis de Datos',
-    location: 'Ciudad de México (Híbrido)',
-    salary: {
-      min: 18000,
-      max: 25000,
-      currency: 'MXN'
-    },
-    requiredSkills: ['Python', 'SQL', 'Excel', 'Estadística'],
-    desiredSkills: ['Power BI', 'Tableau', 'R', 'Machine Learning'],
-    experienceYears: 1,
-    educationLevel: 'Licenciatura en Matemáticas, Actuaría, Ingeniería o afín',
-    employmentType: 'full-time',
-    status: 'published',
-    publishedAt: new Date()
-  },
-  {
-    title: 'Marketing Digital Manager',
-    description: 'Especialista en marketing digital para liderar estrategias de adquisición y engagement.',
-    optimizedDescription: 'Buscamos un Marketing Digital Manager estratégico y creativo. Liderarás campañas multicanal (SEO, SEM, Social Media, Email Marketing), optimizarás el funnel de conversión y gestionarás el presupuesto de marketing. Requisitos: experiencia comprobada en crecimiento digital, manejo de Google Analytics, Facebook Ads, y habilidades analíticas.',
-    department: 'Marketing',
-    location: 'Remoto (México)',
-    salary: {
-      min: 35000,
-      max: 50000,
-      currency: 'MXN'
-    },
-    requiredSkills: ['Marketing Digital', 'SEO', 'SEM', 'Google Analytics', 'Social Media'],
-    desiredSkills: ['Growth Hacking', 'A/B Testing', 'CRO', 'Marketing Automation'],
-    experienceYears: 4,
-    educationLevel: 'Licenciatura en Marketing, Comunicación o afín',
-    employmentType: 'full-time',
-    status: 'published',
-    publishedAt: new Date()
-  },
-  {
-    title: 'Desarrollador Mobile (iOS/Android)',
-    description: 'Desarrollador de aplicaciones móviles nativas o híbridas.',
-    optimizedDescription: 'Únete como Desarrollador Mobile y crea aplicaciones que impacten a millones de usuarios. Trabajarás en el desarrollo de apps nativas (Swift/Kotlin) o híbridas (React Native/Flutter). Ofrecemos tecnología de punta, proyectos innovadores y un equipo apasionado por la excelencia móvil.',
-    department: 'Tecnología',
-    location: 'Puebla (Híbrido)',
-    salary: {
-      min: 40000,
-      max: 60000,
-      currency: 'MXN'
-    },
-    requiredSkills: ['React Native', 'Swift', 'Kotlin', 'Git', 'REST APIs'],
-    desiredSkills: ['Flutter', 'Firebase', 'CI/CD', 'App Store Publishing'],
-    experienceYears: 3,
+    costCenter: 'CC-TEC-001',
+    isNewPosition: true,
+    title: 'Desarrollador Full Stack – Sistemas Internos',
+    numberOfPositions: 2,
+    positionScale: 'Senior',
+    mainFunctions:
+      'Desarrollar y mantener sistemas web internos de gestión para las agencias del grupo. Integrar APIs de proveedores automotrices. Liderar definición técnica de nuevos módulos.',
+    company: 'Corporativo CAP',
+    location: 'Buenos Aires, Argentina',
+    contractType: 'Tiempo completo',
     educationLevel: 'Ingeniería en Sistemas o afín',
+    requiredProfessions: ['Desarrollador Full Stack', 'Ingeniero de Software', 'Desarrollador MERN'],
+    preferredProfession: 'Desarrollador Full Stack MERN',
+    experienceYearsMin: 4,
+    experienceYearsMax: 8,
+    evaluationLevel: 'Avanzado',
+    evaluationAreas: [
+      { area: 'Habilidades Técnicas', percentage: 40 },
+      { area: 'Experiencia Laboral', percentage: 30 },
+      { area: 'Trabajo en Equipo', percentage: 15 },
+      { area: 'Comunicación', percentage: 10 },
+      { area: 'Adaptabilidad', percentage: 5 },
+    ],
+    salary: { min: 0, max: 0, currency: 'ARS' },
+    requiredSkills: ['React', 'Node.js', 'MongoDB', 'TypeScript', 'REST APIs'],
+    desiredSkills: ['NestJS', 'Docker', 'Kubernetes', 'AWS', 'Next.js'],
     employmentType: 'full-time',
-    status: 'published',
-    publishedAt: new Date()
+    status: 'pending',
+    thresholds: { ideal: 80, potential: 65, review: 50 },
   },
+
+  // ── VACANTE publicada (solicitud ya aprobada) ──
   {
-    title: 'Contador Público',
-    description: 'Contador con experiencia en contabilidad general, impuestos y auditorías.',
-    department: 'Finanzas',
-    location: 'Querétaro (Presencial)',
-    salary: {
-      min: 25000,
-      max: 35000,
-      currency: 'MXN'
-    },
-    requiredSkills: ['Contabilidad', 'Impuestos', 'SAT', 'IMSS', 'Nómina'],
-    desiredSkills: ['CONTPAQi', 'Auditoría', 'NIF', 'CFDI'],
-    experienceYears: 3,
-    educationLevel: 'Licenciatura en Contaduría Pública',
-    employmentType: 'full-time',
-    status: 'draft'
-  },
-  {
-    title: 'Ingeniero DevOps',
-    description: 'Ingeniero DevOps para automatizar y optimizar procesos de desarrollo y despliegue.',
-    optimizedDescription: 'Posición clave como Ingeniero DevOps. Diseñarás y mantendrás pipelines CI/CD, gestionarás infraestructura como código, implementarás monitoreo y asegurarás la alta disponibilidad de nuestros servicios. Stack: AWS/Azure, Docker, Kubernetes, Terraform, Jenkins. Buscamos alguien proactivo con mentalidad de automatización.',
+    applicantName: 'María Laura Torres',
     department: 'Tecnología',
-    location: 'Ciudad de México (Remoto)',
-    salary: {
-      min: 50000,
-      max: 75000,
-      currency: 'MXN'
-    },
-    requiredSkills: ['AWS', 'Docker', 'Kubernetes', 'CI/CD', 'Linux', 'Terraform'],
-    desiredSkills: ['Ansible', 'Prometheus', 'Grafana', 'Python', 'Bash'],
-    experienceYears: 5,
-    educationLevel: 'Ingeniería en Sistemas o afín',
+    costCenter: 'CC-TEC-001',
+    isNewPosition: false,
+    title: 'Analista de Sistemas Senior – Plataforma Digital',
+    numberOfPositions: 1,
+    positionScale: 'Senior',
+    mainFunctions:
+      'Análisis, diseño e implementación de soluciones tecnológicas para la plataforma digital del grupo automotriz. Gestión de microservicios y bases de datos NoSQL. Colaboración con equipos de ventas y postventa.',
+    company: 'Mansiago',
+    location: 'Buenos Aires, Argentina',
+    contractType: 'Tiempo completo',
+    educationLevel: 'Ingeniería en Sistemas / Técnico Universitario en Programación',
+    requiredProfessions: ['Desarrollador Full Stack', 'Analista de Sistemas', 'Desarrollador Backend'],
+    preferredProfession: 'Desarrollador Full Stack MERN',
+    experienceYearsMin: 4,
+    experienceYearsMax: 10,
+    evaluationLevel: 'Avanzado',
+    evaluationAreas: [
+      { area: 'Habilidades Técnicas', percentage: 35 },
+      { area: 'Experiencia Laboral', percentage: 35 },
+      { area: 'Resolución de Problemas', percentage: 15 },
+      { area: 'Comunicación', percentage: 10 },
+      { area: 'Adaptabilidad', percentage: 5 },
+    ],
+    salary: { min: 500000, max: 800000, currency: 'ARS' },
+    requiredSkills: ['React', 'Node.js', 'MongoDB', 'TypeScript', 'NestJS', 'Docker'],
+    desiredSkills: ['Kubernetes', 'AWS', 'Next.js', 'TDD', 'Kibana'],
     employmentType: 'full-time',
     status: 'published',
-    publishedAt: new Date()
+    publishedAt: new Date(),
+    timecv: '1 mes',
+    timecvExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    thresholds: { ideal: 80, potential: 65, review: 50 },
   },
+
+  // ── Vacante adicional – Jefe de Taller ──
   {
-    title: 'Practicante de Ventas',
-    description: 'Oportunidad de prácticas profesionales en el área de ventas B2B.',
+    applicantName: 'Diego Fuentes',
+    department: 'Postventa',
+    costCenter: 'CC-PV-003',
+    isNewPosition: false,
+    title: 'Jefe de Taller Automotriz',
+    numberOfPositions: 1,
+    positionScale: 'Jefatura',
+    mainFunctions:
+      'Supervisar operaciones del taller de servicio, gestionar equipo técnico, garantizar calidad de reparaciones y tiempos de entrega. Atención al cliente interno y externo.',
+    company: 'S&M Automotores',
+    location: 'Córdoba, Argentina',
+    contractType: 'Tiempo completo',
+    educationLevel: 'Técnico Mecánico / Ingeniería Automotriz',
+    requiredProfessions: ['Técnico Mecánico', 'Ingeniero Automotriz', 'Jefe de Taller'],
+    preferredProfession: 'Técnico Mecánico Senior',
+    experienceYearsMin: 5,
+    experienceYearsMax: 12,
+    evaluationLevel: 'Intermedio',
+    evaluationAreas: [
+      { area: 'Conocimiento Técnico', percentage: 40 },
+      { area: 'Liderazgo', percentage: 25 },
+      { area: 'Atención al Cliente', percentage: 20 },
+      { area: 'Gestión del Tiempo', percentage: 15 },
+    ],
+    salary: { min: 350000, max: 500000, currency: 'ARS' },
+    requiredSkills: ['Mecánica Automotriz', 'Diagnóstico', 'Liderazgo', 'Gestión de Taller'],
+    desiredSkills: ['Software de diagnóstico', 'Toyota/VW/Ford', 'ERP'],
+    employmentType: 'full-time',
+    status: 'published',
+    publishedAt: new Date(),
+    timecv: '2 meses',
+    timecvExpiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+    thresholds: { ideal: 75, potential: 60, review: 45 },
+  },
+
+  // ── Vacante adicional – Vendedor de Autos ──
+  {
+    applicantName: 'Sandra López',
     department: 'Ventas',
-    location: 'León (Presencial)',
-    salary: {
-      min: 8000,
-      max: 12000,
-      currency: 'MXN'
-    },
-    requiredSkills: ['Comunicación', 'Excel', 'CRM', 'Prospección'],
-    desiredSkills: ['Inglés', 'Negociación', 'Presentaciones'],
-    experienceYears: 0,
-    educationLevel: 'Estudiante de Administración, Marketing o afín',
-    employmentType: 'internship',
-    status: 'published',
-    publishedAt: new Date()
-  },
-  {
-    title: 'Product Manager',
-    description: 'Product Manager para liderar el desarrollo de productos digitales.',
-    department: 'Producto',
-    location: 'Ciudad de México (Híbrido)',
-    salary: {
-      min: 55000,
-      max: 80000,
-      currency: 'MXN'
-    },
-    requiredSkills: ['Product Management', 'Agile', 'Scrum', 'Roadmapping', 'Data Analysis'],
-    desiredSkills: ['SQL', 'A/B Testing', 'User Research', 'Figma'],
-    experienceYears: 5,
-    educationLevel: 'Licenciatura en Ingeniería, Administración o afín',
+    costCenter: 'CC-VEN-002',
+    isNewPosition: false,
+    title: 'Asesor Comercial – Venta de Vehículos 0km',
+    numberOfPositions: 3,
+    positionScale: 'Operativo',
+    mainFunctions:
+      'Asesorar a clientes en la compra de vehículos 0km. Gestionar el proceso de venta completo: prospección, prueba de manejo, cierre y financiamiento. Cumplir metas mensuales.',
+    company: 'CAP Automotores',
+    location: 'Buenos Aires, Argentina',
+    contractType: 'Tiempo completo',
+    educationLevel: 'Secundario completo',
+    requiredProfessions: ['Vendedor', 'Asesor Comercial', 'Ejecutivo de Ventas'],
+    preferredProfession: 'Asesor Comercial Automotriz',
+    experienceYearsMin: 1,
+    experienceYearsMax: 5,
+    evaluationLevel: 'Básico',
+    evaluationAreas: [
+      { area: 'Habilidades de Venta', percentage: 40 },
+      { area: 'Comunicación', percentage: 30 },
+      { area: 'Orientación al Cliente', percentage: 20 },
+      { area: 'Trabajo en Equipo', percentage: 10 },
+    ],
+    salary: { min: 200000, max: 350000, currency: 'ARS' },
+    requiredSkills: ['Ventas', 'CRM', 'Negociación', 'Atención al cliente'],
+    desiredSkills: ['Financiamiento automotriz', 'Inglés', 'Redes sociales'],
     employmentType: 'full-time',
-    status: 'draft'
-  }
+    status: 'published',
+    publishedAt: new Date(),
+    timecv: '1 mes',
+    timecvExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    thresholds: { ideal: 75, potential: 60, review: 45 },
+  },
 ];
 
-// Candidatos de ejemplo para algunas vacantes
-const candidatesData = [
-  {
-    fullName: 'María González Pérez',
-    email: 'maria.gonzalez@email.com',
-    phone: '+52 55 1234 5678',
-    cvUrl: '/uploads/cvs/sample-maria-cv.pdf',
-    cvText: 'Desarrolladora Full Stack con 6 años de experiencia en React, Node.js, TypeScript y MongoDB. He liderado equipos de 5 personas y completado más de 20 proyectos exitosos.',
-    aiScore: 92,
-    aiClassification: 'ideal',
-    aiJustification: 'Candidata excepcional con experiencia directa en todas las tecnologías requeridas. Perfil de liderazgo comprobado y portafolio sólido.',
-    status: 'interview'
-  },
-  {
-    fullName: 'Carlos Rodríguez López',
-    email: 'carlos.rodriguez@email.com',
-    phone: '+52 33 9876 5432',
-    cvUrl: '/uploads/cvs/sample-carlos-cv.pdf',
-    cvText: 'Desarrollador con 3 años de experiencia en React y Node.js. He trabajado en startups y empresas medianas desarrollando aplicaciones web.',
-    aiScore: 75,
-    aiClassification: 'potencial',
-    aiJustification: 'Buen candidato con experiencia relevante pero ligeramente por debajo del nivel senior requerido. Con mentoría podría ser excelente.',
-    status: 'screening'
-  },
-  {
-    fullName: 'Ana Martínez Sánchez',
-    email: 'ana.martinez@email.com',
-    phone: '+52 55 2468 1357',
-    cvUrl: '/uploads/cvs/sample-ana-cv.pdf',
-    cvText: 'Diseñadora UX/UI con 4 años de experiencia. Experta en Figma, Adobe XD y metodologías de Design Thinking. Portfolio con +30 proyectos.',
-    aiScore: 88,
-    aiClassification: 'ideal',
-    aiJustification: 'Excelente candidata con experiencia sólida en diseño de experiencias. Portfolio impresionante y dominio de herramientas requeridas.',
-    status: 'evaluation'
-  },
-  {
-    fullName: 'Luis Hernández Torres',
-    email: 'luis.hernandez@email.com',
-    phone: '+52 81 5555 7777',
-    cvUrl: '/uploads/cvs/sample-luis-cv.pdf',
-    cvText: 'Profesional de RH con 8 años de experiencia en reclutamiento, capacitación y desarrollo organizacional. Certificado en Six Sigma.',
-    aiScore: 95,
-    aiClassification: 'ideal',
-    aiJustification: 'Candidato ideal con amplia experiencia en todas las áreas requeridas. Certificaciones relevantes y historial comprobado de éxito.',
-    status: 'offer'
-  },
-  {
-    fullName: 'Patricia Ramírez Cruz',
-    email: 'patricia.ramirez@email.com',
-    phone: '+52 55 3333 4444',
-    cvUrl: '/uploads/cvs/sample-patricia-cv.pdf',
-    cvText: 'Recién graduada de Actuaría con conocimientos en Python, SQL y Excel. Proyecto final sobre análisis predictivo.',
-    aiScore: 68,
-    aiClassification: 'potencial',
-    aiJustification: 'Candidata junior con buena base académica. Le falta experiencia práctica pero muestra potencial y entusiasmo.',
-    status: 'applied'
-  },
-  {
-    fullName: 'Roberto Silva Mendoza',
-    email: 'roberto.silva@email.com',
-    phone: '+52 33 7777 8888',
-    cvUrl: '/uploads/cvs/sample-roberto-cv.pdf',
-    cvText: 'Especialista en Marketing Digital con 5 años de experiencia. Manejo avanzado de Google Ads, Facebook Ads y Analytics. ROI promedio de 300%.',
-    aiScore: 91,
-    aiClassification: 'ideal',
-    aiJustification: 'Candidato sobresaliente con resultados medibles y experiencia en growth marketing. Perfil estratégico y analítico.',
-    status: 'interview'
-  },
-  {
-    fullName: 'Sofía Jiménez Flores',
-    email: 'sofia.jimenez@email.com',
-    phone: '+52 55 9999 0000',
-    cvUrl: '/uploads/cvs/sample-sofia-cv.pdf',
-    cvText: 'Desarrolladora Mobile con 4 años de experiencia en React Native y Flutter. Apps publicadas en App Store y Google Play.',
-    aiScore: 85,
-    aiClassification: 'ideal',
-    aiJustification: 'Excelente candidata con experiencia cross-platform. Apps publicadas demuestran capacidad de llevar proyectos a producción.',
-    status: 'screening'
-  },
-  {
-    fullName: 'Miguel Ángel Torres',
-    email: 'miguel.torres@email.com',
-    phone: '+52 81 1111 2222',
-    cvUrl: '/uploads/cvs/sample-miguel-cv.pdf',
-    cvText: 'Ingeniero DevOps con 6 años de experiencia. Experto en AWS, Docker, Kubernetes y Terraform. Implementación de CI/CD en +15 proyectos.',
-    aiScore: 94,
-    aiClassification: 'ideal',
-    aiJustification: 'Candidato excepcional con dominio completo del stack DevOps. Experiencia comprobada en automatización y escalabilidad.',
-    status: 'evaluation'
-  },
-  {
-    fullName: 'Daniela Morales Ruiz',
-    email: 'daniela.morales@email.com',
-    phone: '+52 55 6666 5555',
-    cvUrl: '/uploads/cvs/sample-daniela-cv.pdf',
-    cvText: 'Estudiante de 8vo semestre de Administración. Experiencia en ventas retail por 1 año. Manejo de Excel y CRM básico.',
-    aiScore: 72,
-    aiClassification: 'potencial',
-    aiJustification: 'Candidata junior con actitud positiva y experiencia básica en ventas. Buena opción para prácticas profesionales.',
-    status: 'applied'
-  },
-  {
-    fullName: 'Jorge Fernández Castro',
-    email: 'jorge.fernandez@email.com',
-    phone: '+52 33 4444 3333',
-    cvUrl: '/uploads/cvs/sample-jorge-cv.pdf',
-    cvText: 'Product Manager con 2 años de experiencia en startups. Conocimientos de Agile, Scrum y análisis de datos.',
-    aiScore: 65,
-    aiClassification: 'potencial',
-    aiJustification: 'Candidato con experiencia pero por debajo del nivel senior requerido. Muestra potencial de crecimiento.',
-    status: 'rejected'
-  }
-];
+// ─────────────────────────────────────────────
+// CV TEXT COMPLETO DE LUCIANO (extraído del PDF cv_2025_us-1.pdf)
+// ─────────────────────────────────────────────
+const LUCIANO_CV_TEXT = `LUCIANO MASTRANGELO
+Senior Technician in Programming
+Email: lucianomastrangelo@hotmail.com.ar
+Phone: 1136936750
+LinkedIn: luciano-mastrangelo
+GitHub: github.com/luciannomas
+
+PROFESSIONAL PROFILE
+IT professional with experience in agile methodologies (Scrum, Kanban) and leadership roles. Skilled in using AI tools like Copilot and ChatGPT to optimize workflows and support decision-making. Strong teamwork and autonomy, with excellent time availability and professional presence.
+
+EXPERIENCE
+
+Developer Full Stack
+@SolutionBox
+December 2018 - January 2022 | Barracas, Buenos Aires
+- Development and web service for retail and wholesale stores of the company.
+- Technologies used: Symphony (PHP), JavaScript, jQuery, Bootstrap, MySQL.
+- API Rest market integration services. Technologies: Node.js, MongoDB, Express, TypeScript, React.
+
+Developer Full Stack MERN
+@Carrefour (Contractor)
+June 2021 - December 2021 | Capital Federal, Buenos Aires
+- Performed tasks in node-mongo and react-native on virtual card wallets and user sessions.
+
+Developer Full Stack MERN
+@Fichap (Contractor)
+January 2022 - September 2022 | Palermo, Buenos Aires
+- Fichap is a startup dedicated to HR area management and metrics.
+- Worked with Nest.js (Node) and Next.js (React), Bootstrap, AWS and Docker.
+
+Developer Full Stack MERN
+@SooftTechnology
+April 2022 - April 2024 | Cordoba Capital, Cordoba
+- SooftTechnology: consulting firm specialized in outsourcing IT professionals and Agile Software developments.
+- Part of the work cell servicing and updating the Clarin and Ole pages.
+- Technologies: Docker, Node.js, React, MongoDB.
+
+Developer Full Stack MERN
+@Accenture
+April 2024 - Present | Parque Patricios, Buenos Aires
+- Accenture: leading multinational consulting firm specializing in technology, outsourcing, and innovation.
+- Building microservices using Nest.js and MongoDB to manage registration of agreements on the Banco Santander platform.
+- Technologies: TDD, Docker, Kibana, Kubernetes.
+
+EDUCATION
+
+Bachelor's Degree in Economics and Management of Organizations
+Maria Mazzarello School
+March 1998 - March 2011
+
+University Technician in Programming
+National Technological University UTN
+March 2012 - Present
+
+LANGUAGES
+English (intermediate)
+Spanish (native)
+
+PROJECTS
+- Portfolio Legal study (Freelance) - React and Node.js: https://estudiojuridicov1.netlify.app
+- Ecommerce in React: https://eccomercetest.netlify.app/
+- Blog users (React/Material-UI): https://github.com/luciannomas/cultura-blog
+- CRUD users (Node/Mongo): https://github.com/luciannomas/zafirus
+- Tailwind example: https://tailwind-dash.vercel.app/
+- Contact page: https://shupptime.vercel.app/
+- Ecommerce production: https://pedidosv1.vercel.app/
+
+REFERENCES
+- Librería ABC III VENUS. Tel: 4441-6481
+- Club Parque Móron sur. Tel: 4696-0263
+- Libson. Tel: 4104 4600
+- Solution box. Tel: 11 6091-1200`;
 
 async function seed() {
   try {
-    console.log('🌱 Iniciando seed de la base de datos...\n');
-    console.log('📡 URI de conexión:', MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')); // Ocultar credenciales
-    console.log('🔍 Verificando conexión...\n');
+    console.log('🌱 Iniciando seed CAP Automotriz...\n');
+    console.log('📡 URI:', MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
 
-    // Conectar a MongoDB
     await mongoose.connect(MONGODB_URI);
-    console.log('✅ Conectado a MongoDB');
-    console.log('📊 Base de datos:', mongoose.connection.db?.databaseName || 'No especificada');
-    console.log('🔗 Host:', mongoose.connection.host || 'N/A');
-    console.log('📦 Colecciones existentes:', (await mongoose.connection.db?.listCollections().toArray())?.map(c => c.name).join(', ') || 'Ninguna');
+    console.log('✅ MongoDB conectado –', mongoose.connection.db?.databaseName);
     console.log('');
 
-    // Limpiar colecciones existentes
-    console.log('🗑️  Limpiando colecciones existentes...');
+    // Limpiar
+    console.log('🗑️  Limpiando colecciones...');
     await Vacancy.deleteMany({});
     await Candidate.deleteMany({});
-    console.log('✅ Colecciones limpiadas\n');
+    console.log('✅ Limpiado\n');
 
     // Insertar vacantes
     console.log('📝 Insertando vacantes...');
     const insertedVacancies = await Vacancy.insertMany(vacanciesData);
-    console.log(`✅ ${insertedVacancies.length} vacantes insertadas\n`);
+    console.log(`✅ ${insertedVacancies.length} vacantes insertadas`);
+    insertedVacancies.forEach(v => console.log(`   ${v.status === 'pending' ? '📋 SOLICITUD' : '🟢 PUBLICADA'} → ${v.title}`));
+    console.log('');
 
-    // Asignar candidatos a las primeras vacantes publicadas
-    const publishedVacancies = insertedVacancies.filter(v => v.status === 'published');
-    
-    // Asignar candidatos específicos a vacantes específicas
-    const candidatesWithVacancies = candidatesData.map((candidate, index) => {
-      let vacancyIndex = 0;
-      
-      // Asignar por especialidad
-      if (index === 0 || index === 1) {
-        // María y Carlos -> Desarrollador Full Stack
-        vacancyIndex = publishedVacancies.findIndex(v => v.title.includes('Full Stack'));
-      } else if (index === 2) {
-        // Ana -> Diseñador UX/UI
-        vacancyIndex = publishedVacancies.findIndex(v => v.title.includes('UX/UI'));
-      } else if (index === 3) {
-        // Luis -> Gerente de RH
-        vacancyIndex = publishedVacancies.findIndex(v => v.title.includes('Recursos Humanos'));
-      } else if (index === 4) {
-        // Patricia -> Analista de Datos
-        vacancyIndex = publishedVacancies.findIndex(v => v.title.includes('Analista de Datos'));
-      } else if (index === 5) {
-        // Roberto -> Marketing Digital
-        vacancyIndex = publishedVacancies.findIndex(v => v.title.includes('Marketing'));
-      } else if (index === 6) {
-        // Sofía -> Desarrollador Mobile
-        vacancyIndex = publishedVacancies.findIndex(v => v.title.includes('Mobile'));
-      } else if (index === 7) {
-        // Miguel -> DevOps
-        vacancyIndex = publishedVacancies.findIndex(v => v.title.includes('DevOps'));
-      } else if (index === 8) {
-        // Daniela -> Practicante Ventas
-        vacancyIndex = publishedVacancies.findIndex(v => v.title.includes('Practicante'));
-      } else {
-        // Jorge -> cualquier otra vacante disponible
-        vacancyIndex = 0;
-      }
+    // Vacante publicada de tecnología (para Luciano y otros)
+    const techVacancy = insertedVacancies.find(v => v.title.includes('Analista de Sistemas'));
+    const tallerVacancy = insertedVacancies.find(v => v.title.includes('Jefe de Taller'));
+    const ventasVacancy = insertedVacancies.find(v => v.title.includes('Asesor Comercial'));
 
-      return {
-        ...candidate,
-        vacancyId: publishedVacancies[vacancyIndex]?._id || publishedVacancies[0]._id
-      };
-    });
+    if (!techVacancy) throw new Error('No se encontró la vacante de tecnología');
+
+    // ─────────────────────────────────────────
+    // CANDIDATOS
+    // ─────────────────────────────────────────
+    const candidatesData: any[] = [
+      // ── LUCIANO MASTRANGELO – candidato real con CV completo ──
+      {
+        vacancyId: techVacancy._id,
+        fullName: 'Luciano Mastrangelo',
+        email: 'lucianomastrangelo@hotmail.com.ar',
+        phone: '1136936750',
+        cvUrl: '/uploads/cvs/cv_2025_us-1.pdf',
+        cvText: LUCIANO_CV_TEXT,
+        aiScore: 94,
+        aiClassification: 'ideal',
+        aiJustification:
+          'Candidato excepcional con más de 6 años de experiencia en desarrollo Full Stack MERN. Experiencia comprobada en empresas de alto nivel (Accenture, SooftTechnology). Dominio del stack tecnológico requerido: React, Node.js, MongoDB, TypeScript, NestJS, Docker, Kubernetes. Actualmente en Accenture desarrollando microservicios con las tecnologías exactas del puesto.',
+        status: 'screening',
+        references: [
+          { name: 'Librería ABC III VENUS', company: 'Librería ABC', phone: '4441-6481', email: '' },
+          { name: 'Club Parque Móron sur', company: 'Club Parque Móron', phone: '4696-0263', email: '' },
+          { name: 'Libson', company: 'Libson', phone: '4104 4600', email: '' },
+          { name: 'Solution box', company: 'SolutionBox', phone: '11 6091-1200', email: '' },
+        ],
+        communications: [
+          {
+            type: 'email',
+            message: '¡Felicitaciones! Tu perfil ha pasado la etapa de screening. Te contactaremos para coordinar una entrevista.',
+            sentBy: 'RRHH CAP',
+            sentAt: new Date(),
+          },
+        ],
+      },
+
+      // ── Candidato 2 – potencial para tecnología ──
+      {
+        vacancyId: techVacancy._id,
+        fullName: 'Valentina Romero',
+        email: 'valentina.romero@email.com',
+        phone: '+54 11 4567 8901',
+        cvUrl: '/uploads/cvs/sample-valentina-cv.pdf',
+        cvText:
+          'Desarrolladora Full Stack con 3 años de experiencia en React y Node.js. Trabajé en Mercado Libre como contractor y en una startup de fintech. Conocimientos en TypeScript, MongoDB y Git. Actualmente cursando certificación AWS.',
+        aiScore: 72,
+        aiClassification: 'potencial',
+        aiJustification:
+          'Buena candidata con experiencia relevante en el stack requerido. Le falta profundidad en NestJS y Docker pero muestra capacidad de aprendizaje.',
+        status: 'applied',
+        references: [],
+        communications: [],
+      },
+
+      // ── Candidato 3 – no perfila tecnología ──
+      {
+        vacancyId: techVacancy._id,
+        fullName: 'Marcos Gutiérrez',
+        email: 'marcos.gutierrez@email.com',
+        phone: '+54 11 3344 5566',
+        cvUrl: '/uploads/cvs/sample-marcos-cv.pdf',
+        cvText:
+          'Desarrollador frontend con 1 año de experiencia principalmente en HTML, CSS y JavaScript vanilla. Conocimientos básicos de React. No tengo experiencia en backend ni bases de datos.',
+        aiScore: 38,
+        aiClassification: 'no perfila',
+        aiJustification:
+          'Perfil muy junior para los requisitos del puesto. No tiene experiencia en backend, bases de datos ni Docker.',
+        status: 'rejected',
+        references: [],
+        communications: [],
+      },
+
+      // ── Candidato 4 – taller ──
+      ...(tallerVacancy
+        ? [
+            {
+              vacancyId: tallerVacancy._id,
+              fullName: 'Roberto Sánchez',
+              email: 'roberto.sanchez@email.com',
+              phone: '+54 351 678 9012',
+              cvUrl: '/uploads/cvs/sample-roberto-cv.pdf',
+              cvText:
+                'Técnico mecánico con 8 años de experiencia en talleres oficiales Toyota y Ford. Jefe de taller durante 3 años en concesionaria regional. Manejo de software de diagnóstico Techstream y FDRS. Equipo a cargo: 6 técnicos.',
+              aiScore: 88,
+              aiClassification: 'ideal',
+              aiJustification:
+                'Candidato ideal con experiencia sólida como jefe de taller en marcas oficiales. Manejo de software de diagnóstico y liderazgo de equipos comprobado.',
+              status: 'interview',
+              references: [],
+              communications: [],
+            },
+            {
+              vacancyId: tallerVacancy._id,
+              fullName: 'Alejandro Peralta',
+              email: 'alejandro.peralta@email.com',
+              phone: '+54 351 234 5678',
+              cvUrl: '/uploads/cvs/sample-alejandro-cv.pdf',
+              cvText:
+                'Técnico mecánico con 5 años de experiencia en taller independiente. Especialización en motores nafteros y diesel. Sin experiencia formal en jefatura pero con liderazgo informal de equipo.',
+              aiScore: 65,
+              aiClassification: 'potencial',
+              aiJustification:
+                'Buen técnico con años de experiencia pero sin experiencia formal de jefatura. Potencial para el rol con acompañamiento.',
+              status: 'evaluation',
+              references: [],
+              communications: [],
+            },
+          ]
+        : []),
+
+      // ── Candidatos ventas ──
+      ...(ventasVacancy
+        ? [
+            {
+              vacancyId: ventasVacancy._id,
+              fullName: 'Camila Ibáñez',
+              email: 'camila.ibanez@email.com',
+              phone: '+54 11 7788 9900',
+              cvUrl: '/uploads/cvs/sample-camila-cv.pdf',
+              cvText:
+                'Asesora comercial con 3 años de experiencia en venta de autos 0km en concesionaria Peugeot. Supero metas en 120% promedio. Manejo de CRM Salesforce y financiamiento automotriz con banco BICE.',
+              aiScore: 91,
+              aiClassification: 'ideal',
+              aiJustification:
+                'Candidata sobresaliente con experiencia directa en venta automotriz y resultados comprobados por encima de meta.',
+              status: 'offer',
+              references: [],
+              communications: [],
+            },
+            {
+              vacancyId: ventasVacancy._id,
+              fullName: 'Nicolás Fernández',
+              email: 'nicolas.fernandez@email.com',
+              phone: '+54 11 5544 3322',
+              cvUrl: '/uploads/cvs/sample-nicolas-cv.pdf',
+              cvText:
+                'Vendedor con 2 años en retail y 6 meses en agencia de autos usados. Buenas habilidades de comunicación. Nunca vendí 0km pero tengo muchas ganas de aprender el rubro automotriz.',
+              aiScore: 58,
+              aiClassification: 'potencial',
+              aiJustification:
+                'Candidato con base en ventas pero sin experiencia en automotriz 0km. Actitud positiva y disposición para aprender.',
+              status: 'applied',
+              references: [],
+              communications: [],
+            },
+          ]
+        : []),
+    ];
 
     console.log('👥 Insertando candidatos...');
-    const insertedCandidates = await Candidate.insertMany(candidatesWithVacancies);
+    const insertedCandidates = await Candidate.insertMany(candidatesData);
     console.log(`✅ ${insertedCandidates.length} candidatos insertados\n`);
 
-    // Resumen
-    console.log('📊 RESUMEN DE SEED:');
-    console.log('==================');
-    console.log(`✅ Vacantes creadas: ${insertedVacancies.length}`);
-    console.log(`   - Publicadas: ${insertedVacancies.filter(v => v.status === 'published').length}`);
-    console.log(`   - Borradores: ${insertedVacancies.filter(v => v.status === 'draft').length}`);
-    console.log(`\n✅ Candidatos creados: ${insertedCandidates.length}`);
-    console.log(`   - Ideales: ${insertedCandidates.filter(c => c.aiClassification === 'ideal').length}`);
-    console.log(`   - Potenciales: ${insertedCandidates.filter(c => c.aiClassification === 'potencial').length}`);
-    console.log(`   - No perfiles: ${insertedCandidates.filter(c => c.aiClassification === 'no perfila').length}`);
-    console.log('\n🎯 Estados de candidatos:');
-    console.log(`   - Aplicados: ${insertedCandidates.filter(c => c.status === 'applied').length}`);
-    console.log(`   - Screening: ${insertedCandidates.filter(c => c.status === 'screening').length}`);
-    console.log(`   - Entrevista: ${insertedCandidates.filter(c => c.status === 'interview').length}`);
-    console.log(`   - Evaluación: ${insertedCandidates.filter(c => c.status === 'evaluation').length}`);
-    console.log(`   - Oferta: ${insertedCandidates.filter(c => c.status === 'offer').length}`);
-    console.log(`   - Rechazados: ${insertedCandidates.filter(c => c.status === 'rejected').length}`);
+    // ─────────────────────────────────────────
+    // RESUMEN
+    // ─────────────────────────────────────────
+    console.log('📊 RESUMEN SEED CAP AUTOMOTRIZ');
+    console.log('================================');
+    console.log(`\n📋 Vacantes: ${insertedVacancies.length}`);
+    insertedVacancies.forEach(v => {
+      const icon = v.status === 'pending' ? '🕐' : v.status === 'published' ? '🟢' : '⚪';
+      console.log(`   ${icon} [${v.status.toUpperCase()}] ${v.title} (${v.company})`);
+    });
 
-    console.log('\n✨ ¡Seed completado exitosamente!\n');
-    console.log('🚀 Puedes acceder a:');
-    console.log('   - Dashboard: http://localhost:3000/dashboard');
-    console.log('   - Vacantes: http://localhost:3000/dashboard/vacancies');
-    console.log('   - Candidatos: http://localhost:3000/dashboard/candidates');
-    console.log('   - Kanban: http://localhost:3000/dashboard/kanban\n');
+    console.log(`\n👤 Candidatos: ${insertedCandidates.length}`);
+    insertedCandidates.forEach(c => {
+      const icon = c.aiClassification === 'ideal' ? '🌟' : c.aiClassification === 'potencial' ? '⚡' : '❌';
+      console.log(`   ${icon} ${c.fullName} | Score: ${c.aiScore}/100 | ${c.aiClassification} | Estado: ${c.status}`);
+    });
 
+    const luciano = insertedCandidates.find(c => c.fullName === 'Luciano Mastrangelo');
+    if (luciano) {
+      console.log('\n🎯 LUCIANO MASTRANGELO cargado correctamente:');
+      console.log(`   - CV text: ${luciano.cvText?.length || 0} caracteres`);
+      console.log(`   - Score IA: ${luciano.aiScore}/100 (${luciano.aiClassification})`);
+      console.log(`   - Referencias: ${(luciano as any).references?.length || 0} cargadas`);
+      console.log(`   - Estado: ${luciano.status}`);
+      console.log(`   - Vacante: ${techVacancy.title}`);
+      console.log('\n   ✅ El CV genérico se generará con todos los datos cuando hagas click en "Generar CV Genérico"');
+    }
+
+    console.log('\n🚀 Accedé a:');
+    console.log('   Dashboard:  http://localhost:3000/dashboard');
+    console.log('   Vacantes:   http://localhost:3000/dashboard/vacancies');
+    console.log('   Candidatos: http://localhost:3000/dashboard/candidates');
+    console.log('   Kanban:     http://localhost:3000/dashboard/kanban\n');
   } catch (error) {
     console.error('❌ Error en seed:', error);
     process.exit(1);
@@ -451,6 +487,4 @@ async function seed() {
   }
 }
 
-// Ejecutar seed
 seed();
-
