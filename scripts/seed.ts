@@ -5,8 +5,11 @@ import { resolve } from 'path';
 function loadEnvFile() {
   const possiblePaths = [
     resolve(process.cwd(), '.env.local'),
+    resolve(process.cwd(), '.env'),
     resolve(__dirname, '..', '.env.local'),
+    resolve(__dirname, '..', '.env'),
     resolve(__dirname, '../..', '.env.local'),
+    resolve(__dirname, '../..', '.env'),
   ];
   for (const envPath of possiblePaths) {
     try {
