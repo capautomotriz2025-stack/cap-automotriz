@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Sparkles, Loader2, Plus, X, Bot, Upload } from 'lucide-react';
+import { ArrowLeft, Sparkles, Loader2, Plus, X, Bot, Upload, FileText, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
 import { buildAgentPayloadFromVacancy } from '@/lib/vacancy-to-agent';
 
@@ -22,6 +22,7 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
   const [uploadingFile, setUploadingFile] = useState(false);
   const [showCreateAgentModal, setShowCreateAgentModal] = useState(false);
   const [creatingAgent, setCreatingAgent] = useState(false);
+  const [descriptorExpanded, setDescriptorExpanded] = useState(true);
   
   const [formData, setFormData] = useState<{
     applicantName: string;
@@ -231,16 +232,16 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setFormData((prev) => ({ ...prev, jobDescriptorFile: file }));
+    // Limpiar archivo y texto previo al reemplazar
+    setFormData((prev) => ({ ...prev, jobDescriptorFile: file, jobDescriptorFileUrl: '', mainFunctions: '' }));
     const result = await handleFileUpload(file);
     if (result) {
       setFormData((prev) => ({
         ...prev,
         jobDescriptorFileUrl: result.url,
-        mainFunctions: result.extractedText && !prev.mainFunctions
-          ? result.extractedText
-          : prev.mainFunctions,
+        mainFunctions: result.extractedText || '',
       }));
+      setDescriptorExpanded(true);
     }
   };
 
@@ -699,21 +700,76 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
         <Card>
           <CardHeader>
             <CardTitle>Descriptor de Puesto</CardTitle>
-            <CardDescription>Descripción del puesto y documento adjunto</CardDescription>
+            <CardDescription>Documento adjunto y contenido del descriptor del puesto</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+
+            {/* Banner: archivo ya cargado */}
+            {formData.jobDescriptorFileUrl && (
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-green-500/10 border border-green-500/30">
+                <CheckCircle2 className="h-5 w-5 text-green-400 mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-green-300">Archivo cargado</p>
+                  <p className="text-xs text-green-400 truncate">
+                    {formData.jobDescriptorFile?.name || formData.jobDescriptorFileUrl.split('/').pop()}
+                  </p>
+                </div>
+                <a
+                  href={formData.jobDescriptorFileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-green-400 hover:text-green-300 underline shrink-0"
+                >
+                  Ver ↗
+                </a>
+              </div>
+            )}
+
+            {/* Texto extraído: expandible y editable */}
+            {formData.mainFunctions ? (
+              <div className="border border-border rounded-lg overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setDescriptorExpanded(!descriptorExpanded)}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-muted/40 hover:bg-muted/60 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-semibold">Contenido del descriptor</span>
+                    <span className="text-xs text-muted-foreground">({formData.mainFunctions.length} caracteres · editable)</span>
+                  </div>
+                  {descriptorExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                </button>
+                {descriptorExpanded && (
+                  <div className="p-3">
+                    <Textarea
+                      value={formData.mainFunctions}
+                      onChange={(e) => setFormData({ ...formData, mainFunctions: e.target.value })}
+                      rows={10}
+                      className="font-mono text-xs resize-y"
+                      placeholder="Contenido del descriptor..."
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="mainFunctions">Descripción / Principales Funciones</Label>
+                <Textarea
+                  id="mainFunctions"
+                  placeholder="Describa brevemente las principales funciones del puesto, o adjunte un documento para extraerlas automáticamente..."
+                  value={formData.mainFunctions}
+                  onChange={(e) => setFormData({ ...formData, mainFunctions: e.target.value })}
+                  rows={5}
+                />
+              </div>
+            )}
+
+            {/* Upload */}
             <div className="space-y-2">
-              <Label htmlFor="mainFunctions">Descripción / Principales Funciones</Label>
-              <Textarea
-                id="mainFunctions"
-                placeholder="Describa brevemente las principales funciones del puesto..."
-                value={formData.mainFunctions}
-                onChange={(e) => setFormData({ ...formData, mainFunctions: e.target.value })}
-                rows={5}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="jobDescriptor">Adjuntar Archivo (PDF)</Label>
+              <Label htmlFor="jobDescriptor">
+                {formData.jobDescriptorFileUrl ? 'Reemplazar archivo' : 'Adjuntar archivo'}
+              </Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="jobDescriptor"
@@ -722,26 +778,13 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
                   onChange={handleFileChange}
                   className="cursor-pointer"
                 />
-                {formData.jobDescriptorFile && (
-                  <Badge variant="secondary">
-                    {formData.jobDescriptorFile.name}
-                  </Badge>
-                )}
-                {formData.jobDescriptorFileUrl && !formData.jobDescriptorFile && (
-                  <Badge variant="secondary">
-                    <a href={formData.jobDescriptorFileUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                      Archivo actual
-                    </a>
-                  </Badge>
-                )}
-                {uploadingFile && (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                )}
+                {uploadingFile && <Loader2 className="h-4 w-4 animate-spin shrink-0" />}
               </div>
               <p className="text-xs text-muted-foreground">
-                Solo archivos PDF (máximo 10 MB)
+                PDF o Word (.docx) · máximo 10 MB · al subir un nuevo archivo se reemplaza el anterior
               </p>
             </div>
+
           </CardContent>
         </Card>
 
