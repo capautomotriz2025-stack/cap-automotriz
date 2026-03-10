@@ -3,6 +3,34 @@ import { put } from '@vercel/blob';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 
+const ALLOWED_TYPES: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/msword': 'doc',
+};
+
+async function extractText(buffer: Buffer, mimeType: string, fileName: string): Promise<string> {
+  try {
+    if (mimeType === 'application/pdf' || fileName.endsWith('.pdf')) {
+      const pdfParse = (await import('pdf-parse')).default;
+      const data = await pdfParse(buffer);
+      return data.text.trim();
+    }
+
+    if (
+      mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      fileName.endsWith('.docx')
+    ) {
+      const mammoth = await import('mammoth');
+      const result = await mammoth.extractRawText({ buffer });
+      return result.value.trim();
+    }
+  } catch (e) {
+    console.error('Error extrayendo texto del documento:', e);
+  }
+  return '';
+}
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -16,10 +44,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validar que sea PDF
-    if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+    // Aceptar PDF y DOCX
+    const isAllowed =
+      file.type in ALLOWED_TYPES ||
+      file.name.endsWith('.pdf') ||
+      file.name.endsWith('.docx') ||
+      file.name.endsWith('.doc');
+
+    if (!isAllowed) {
       return NextResponse.json(
-        { success: false, error: 'Solo se permiten archivos PDF' },
+        { success: false, error: 'Solo se permiten archivos PDF o Word (.docx)' },
         { status: 400 }
       );
     }
@@ -35,16 +69,25 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-    
+
+    // Extraer texto del documento
+    const extractedText = await extractText(buffer, file.type, file.name);
+
     let fileUrl: string;
     const folder = fileType === 'job-descriptor' ? 'job-descriptors' : 'general';
+
+    // Determinar content type para almacenamiento
+    const contentType =
+      file.type || (file.name.endsWith('.docx')
+        ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        : 'application/pdf');
 
     // Si está en producción (Vercel), usar Blob Storage
     if (process.env.BLOB_READ_WRITE_TOKEN) {
       console.log(`☁️  Subiendo archivo a Vercel Blob: ${folder}/${fileName}`);
       const blob = await put(`${folder}/${fileName}`, buffer, {
         access: 'public',
-        contentType: 'application/pdf',
+        contentType,
       });
       fileUrl = blob.url;
       console.log('✅ Archivo subido a Blob:', fileUrl);
@@ -67,7 +110,8 @@ export async function POST(request: NextRequest) {
       success: true,
       url: fileUrl,
       fileName: file.name,
-      size: file.size
+      size: file.size,
+      extractedText,
     });
   } catch (error: any) {
     console.error('Error subiendo archivo:', error);

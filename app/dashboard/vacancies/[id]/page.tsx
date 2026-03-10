@@ -204,22 +204,19 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
     }
   };
 
-  const handleFileUpload = async (file: File): Promise<string | null> => {
+  const handleFileUpload = async (file: File): Promise<{ url: string; extractedText?: string } | null> => {
     setUploadingFile(true);
     try {
       const formDataToSend = new FormData();
       formDataToSend.append('file', file);
       formDataToSend.append('type', 'job-descriptor');
-      
+
       const response = await axios.post('/api/upload', formDataToSend, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       if (response.data.success) {
-        setFormData({ ...formData, jobDescriptorFileUrl: response.data.url });
-        return response.data.url;
+        return { url: response.data.url, extractedText: response.data.extractedText };
       }
       return null;
     } catch (error) {
@@ -233,9 +230,17 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setFormData({ ...formData, jobDescriptorFile: file });
-      await handleFileUpload(file);
+    if (!file) return;
+    setFormData((prev) => ({ ...prev, jobDescriptorFile: file }));
+    const result = await handleFileUpload(file);
+    if (result) {
+      setFormData((prev) => ({
+        ...prev,
+        jobDescriptorFileUrl: result.url,
+        mainFunctions: result.extractedText && !prev.mainFunctions
+          ? result.extractedText
+          : prev.mainFunctions,
+      }));
     }
   };
 
@@ -293,9 +298,9 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
       // Subir archivo si existe
       let jobDescriptorUrl = formData.jobDescriptorFileUrl;
       if (formData.jobDescriptorFile && !jobDescriptorUrl) {
-        const uploadedUrl = await handleFileUpload(formData.jobDescriptorFile);
-        if (uploadedUrl) {
-          jobDescriptorUrl = uploadedUrl;
+        const uploadResult = await handleFileUpload(formData.jobDescriptorFile);
+        if (uploadResult) {
+          jobDescriptorUrl = uploadResult.url;
         }
       }
 
@@ -713,7 +718,7 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
                 <Input
                   id="jobDescriptor"
                   type="file"
-                  accept=".pdf"
+                  accept=".pdf,.docx,.doc"
                   onChange={handleFileChange}
                   className="cursor-pointer"
                 />
