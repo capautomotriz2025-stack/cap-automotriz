@@ -136,21 +136,29 @@ export async function POST(request: NextRequest) {
     }
     
     // Extraer texto real del PDF usando pdf-parse
-    let cvText = `CV de ${fullName}`; // Fallback si falla la extracción
+    let cvText = '';
     try {
       console.log('📄 Extrayendo texto del PDF:', fileName);
       const pdfData = await pdfParse(buffer);
-      
-      if (pdfData.text && pdfData.text.trim().length > 0) {
-        cvText = pdfData.text;
+      cvText = pdfData.text?.trim() || '';
+      if (cvText.length > 0) {
         console.log('✅ Texto extraído exitosamente:', cvText.length, 'caracteres');
-        console.log('📝 Primeros 200 caracteres:', cvText.substring(0, 200));
       } else {
-        console.log('⚠️ PDF vacío o sin texto extraíble, usando fallback');
+        console.log('⚠️ PDF vacío o sin texto extraíble');
       }
     } catch (error) {
       console.error('⚠️ Error extrayendo texto del PDF:', error);
-      console.log('📝 Usando fallback: texto básico con nombre del candidato');
+    }
+
+    // Validar que el PDF tenga texto suficiente para ser analizado
+    if (cvText.length < 100) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'El formato del CV no es compatible. Por favor subí un PDF con texto seleccionable (no escaneado ni basado en imagen). Formatos recomendados: PDF exportado desde Word, Google Docs o LibreOffice.',
+        },
+        { status: 422 }
+      );
     }
     
       // Obtener el agente de IA asociado a la vacante

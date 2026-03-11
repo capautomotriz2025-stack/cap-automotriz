@@ -41,12 +41,14 @@ export default function CandidateDetailPage() {
     setGeneratingInterview(true);
     try {
       const response = await axios.post(`/api/candidates/${params.id}/generate-interview`);
-      if (response.data.success && response.data.data.pdfUrl) {
+      if (response.data.success && response.data.data?.pdfUrl) {
         window.open(response.data.data.pdfUrl, '_blank');
+      } else {
+        alert('No se pudo generar la guía de entrevista. Verificá que el candidato tenga CV cargado con información suficiente.');
       }
     } catch (error) {
       console.error('Error generando entrevista:', error);
-      alert('Error al generar entrevista');
+      alert('Error al generar la guía de entrevista. Intentá de nuevo.');
     } finally {
       setGeneratingInterview(false);
     }
@@ -65,11 +67,15 @@ export default function CandidateDetailPage() {
         setCandidate({ ...candidate, genericCV: cvData });
         if (cvData?.pdfUrl) {
           window.open(cvData.pdfUrl, '_blank');
+        } else {
+          alert('El CV genérico se generó pero no se pudo obtener el archivo. Recargá la página e intentá de nuevo.');
         }
+      } else {
+        alert('No se pudo generar el CV genérico. Verificá que el candidato tenga CV cargado con información suficiente.');
       }
     } catch (error) {
       console.error('Error generando CV genérico:', error);
-      alert('Error al generar CV genérico');
+      alert('Error al generar el CV genérico. Intentá de nuevo.');
     } finally {
       setGeneratingCV(false);
     }

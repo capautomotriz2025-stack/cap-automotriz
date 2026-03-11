@@ -828,6 +828,7 @@ export default function EditVacancyPage({ params }: { params: { id: string } }) 
                   value={formData.currency}
                   onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
                 >
+                  <option value="HNL">HNL (Lempiras)</option>
                   <option value="MXN">MXN (Pesos)</option>
                   <option value="USD">USD (Dólares)</option>
                   <option value="EUR">EUR (Euros)</option>

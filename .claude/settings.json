@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(BASE_URL=https://cap-automotriz.vercel.app TEST_NUMBER=14 npx tsx scripts/e2e-test-7.ts)",
+      "Bash(grep -n \"sendEmail\\\\|sendInterview\\\\|sendOffer\\\\|sendEvaluation\\\\|email\" app/api/candidates/[id]/route.ts)",
+      "Bash(npx vercel env ls)",
+      "Bash(grep -n \"generate-cv\\\\|genericCv\\\\|generic-cv\\\\|descargar\\\\|download\\\\|generarCV\\\\|generateCv\" app/dashboard/candidates/[id]/page.tsx)",
+      "Bash(xargs grep -l \"pdf\\\\|extract\")",
+      "Bash(sed -n '200,250p' /c/Users/fiona/OneDrive/Escritorio/cap-vs/cap-automotriz/app/dashboard/vacancies/[id]/page.tsx)",
+      "Bash(sed -n '350,400p' /c/Users/fiona/OneDrive/Escritorio/cap-vs/cap-automotriz/app/dashboard/vacancies/[id]/page.tsx)"
+    ]
+  }
+}

@@ -24,7 +24,10 @@ import {
   X,
   CheckCircle2,
   Target,
-  Zap
+  Zap,
+  FileSearch,
+  Loader2,
+  Upload
 } from 'lucide-react';
 
 export default function AIAgentsPage() {
@@ -35,6 +38,12 @@ export default function AIAgentsPage() {
   const [filterCategory, setFilterCategory] = useState('all');
   const [selectedAgent, setSelectedAgent] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [evalAgent, setEvalAgent] = useState<any>(null);
+  const [isEvalModalOpen, setIsEvalModalOpen] = useState(false);
+  const [evalFile, setEvalFile] = useState<File | null>(null);
+  const [evalLoading, setEvalLoading] = useState(false);
+  const [evalResult, setEvalResult] = useState<any>(null);
+  const [evalError, setEvalError] = useState('');
 
   useEffect(() => {
     fetchAgents();
@@ -92,6 +101,37 @@ export default function AIAgentsPage() {
   const openDetailsModal = (agent: any) => {
     setSelectedAgent(agent);
     setIsModalOpen(true);
+  };
+
+  const openEvalModal = (agent: any) => {
+    setEvalAgent(agent);
+    setEvalFile(null);
+    setEvalResult(null);
+    setEvalError('');
+    setIsEvalModalOpen(true);
+  };
+
+  const handleEvaluateCV = async () => {
+    if (!evalFile || !evalAgent) return;
+    setEvalLoading(true);
+    setEvalResult(null);
+    setEvalError('');
+    try {
+      const form = new FormData();
+      form.append('cv', evalFile);
+      const res = await axios.post(`/api/ai-agents/${evalAgent._id}/evaluate-cv`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      if (res.data.success) {
+        setEvalResult(res.data.data);
+      } else {
+        setEvalError(res.data.error || 'Error al evaluar el CV');
+      }
+    } catch (e: any) {
+      setEvalError(e.response?.data?.error || 'Error al evaluar el CV');
+    } finally {
+      setEvalLoading(false);
+    }
   };
 
   const getCategoryIcon = (category: string) => {
@@ -300,14 +340,23 @@ export default function AIAgentsPage() {
                 </div>
 
                 <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="flex-1 border-2 border-cap-red text-cap-red hover:bg-cap-red hover:text-white font-bold transition-all"
                     onClick={() => openDetailsModal(agent)}
                   >
                     <Eye className="mr-2 h-4 w-4" />
                     Ver Detalles
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-2 border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white font-bold transition-all"
+                    onClick={() => openEvalModal(agent)}
+                    title="Evaluar CV con este agente"
+                  >
+                    <FileSearch className="h-4 w-4" />
                   </Button>
                 </div>
               </CardContent>
@@ -353,27 +402,36 @@ export default function AIAgentsPage() {
                   </div>
 
                   <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="flex-1 border-2 border-cap-red text-cap-red hover:bg-cap-red hover:text-white font-bold transition-all"
                       onClick={() => openDetailsModal(agent)}
                     >
                       <Eye className="mr-2 h-4 w-4" />
                       Ver
                     </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-2 border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white font-bold transition-all"
+                      onClick={() => openEvalModal(agent)}
+                      title="Evaluar CV con este agente"
+                    >
+                      <FileSearch className="h-4 w-4" />
+                    </Button>
                     <Link href={`/dashboard/ai-agents/${agent._id}/edit`}>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         className="border-2 border-cap-red text-cap-red hover:bg-cap-red hover:text-white font-bold transition-all"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
                     </Link>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="border-2 border-cap-red text-cap-red hover:bg-cap-red hover:text-white font-bold transition-all"
                       onClick={() => handleDelete(agent._id)}
                     >
@@ -409,6 +467,95 @@ export default function AIAgentsPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Modal Evaluar CV */}
+      <Dialog open={isEvalModalOpen} onOpenChange={(o) => { setIsEvalModalOpen(o); if (!o) { setEvalResult(null); setEvalError(''); setEvalFile(null); } }}>
+        <DialogContent className="max-w-xl bg-cap-gray-dark border-2 border-blue-500 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black text-white flex items-center gap-2">
+              <FileSearch className="h-5 w-5 text-blue-400" />
+              Evaluar CV — {evalAgent?.name}
+            </DialogTitle>
+            <DialogDescription className="text-cap-gray-lightest">
+              Subí un PDF para que el agente lo evalúe automáticamente.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-2">
+            {/* Upload */}
+            <div className="border-2 border-dashed border-blue-500/40 rounded-lg p-4 text-center space-y-2">
+              <Upload className="h-8 w-8 text-blue-400 mx-auto" />
+              <p className="text-sm text-cap-gray-lightest">Seleccioná el CV del candidato (PDF)</p>
+              <input
+                type="file"
+                accept=".pdf"
+                className="hidden"
+                id="eval-cv-input"
+                onChange={(e) => { setEvalFile(e.target.files?.[0] || null); setEvalResult(null); setEvalError(''); }}
+              />
+              <label htmlFor="eval-cv-input" className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors">
+                {evalFile ? evalFile.name : 'Elegir archivo PDF'}
+              </label>
+            </div>
+
+            {evalError && (
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-300">
+                ⚠️ {evalError}
+              </div>
+            )}
+
+            {evalResult && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-cap-black border border-cap-gray">
+                  <span className="text-sm font-bold text-white">Score</span>
+                  <span className={`text-2xl font-black ${evalResult.score >= 80 ? 'text-green-400' : evalResult.score >= 65 ? 'text-yellow-400' : 'text-red-400'}`}>
+                    {evalResult.score}/100
+                  </span>
+                </div>
+                <div className="p-3 rounded-lg bg-cap-black border border-cap-gray">
+                  <p className="text-xs font-bold text-cap-gray-lightest mb-1">Clasificación</p>
+                  <span className={`text-sm font-black px-2 py-1 rounded ${evalResult.classification === 'ideal' ? 'bg-green-500/20 text-green-300' : evalResult.classification === 'potential' ? 'bg-yellow-500/20 text-yellow-300' : 'bg-red-500/20 text-red-300'}`}>
+                    {evalResult.classification === 'ideal' ? '⭐ Ideal' : evalResult.classification === 'potential' ? '⚡ Potencial' : '❌ No perfila'}
+                  </span>
+                </div>
+                <div className="p-3 rounded-lg bg-cap-black border border-cap-gray text-sm text-cap-gray-lightest">
+                  <p className="font-bold text-white mb-1">Resumen</p>
+                  {evalResult.summary}
+                </div>
+                {evalResult.strengths?.length > 0 && (
+                  <div className="p-3 rounded-lg bg-green-500/5 border border-green-500/20 text-sm">
+                    <p className="font-bold text-green-300 mb-1">Fortalezas</p>
+                    <ul className="space-y-1">
+                      {evalResult.strengths.map((s: string, i: number) => <li key={i} className="text-cap-gray-lightest">✓ {s}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {evalResult.concerns?.length > 0 && (
+                  <div className="p-3 rounded-lg bg-red-500/5 border border-red-500/20 text-sm">
+                    <p className="font-bold text-red-300 mb-1">Preocupaciones</p>
+                    <ul className="space-y-1">
+                      {evalResult.concerns.map((c: string, i: number) => <li key={i} className="text-cap-gray-lightest">⚠ {c}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setIsEvalModalOpen(false)} className="px-4 py-2 rounded-md border border-cap-gray text-cap-gray-lightest hover:border-white text-sm font-bold transition-colors">
+                Cerrar
+              </button>
+              <button
+                onClick={handleEvaluateCV}
+                disabled={!evalFile || evalLoading}
+                className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-bold transition-colors flex items-center gap-2"
+              >
+                {evalLoading ? <><Loader2 className="h-4 w-4 animate-spin" /> Analizando...</> : <><FileSearch className="h-4 w-4" /> Analizar CV</>}
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal de Detalles */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

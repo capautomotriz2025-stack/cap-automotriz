@@ -559,7 +559,7 @@ export default function NewVacancyPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="numberOfPositions">Número de Plaza *</Label>
+                <Label htmlFor="numberOfPositions">Número de Plazas *</Label>
                 <Input
                   id="numberOfPositions"
                   type="number"
@@ -568,6 +568,9 @@ export default function NewVacancyPage() {
                   value={formData.numberOfPositions}
                   onChange={(e) => setFormData({ ...formData, numberOfPositions: e.target.value })}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Incluye las plazas existentes más las nuevas que se están solicitando.
+                </p>
               </div>
             </div>
 
@@ -689,13 +692,13 @@ export default function NewVacancyPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Profesiones Requeridas *</Label>
+              <Label>Profesiones / Oficios *</Label>
               <div className="grid md:grid-cols-3 gap-4">
                 {formData.requiredProfessions.map((profession, index) => (
                   <Input
                     key={index}
                     required
-                    placeholder={`Profesión ${index + 1} *`}
+                    placeholder={`Profesión / Oficio ${index + 1} *`}
                     value={profession}
                     onChange={(e) => {
                       const newProfessions = [...formData.requiredProfessions];
@@ -760,6 +763,11 @@ export default function NewVacancyPage() {
                 <option value="avanzado">Avanzado</option>
                 <option value="experto">Experto</option>
               </select>
+              <p className="text-xs text-muted-foreground">
+                <strong>Básico:</strong> screening inicial · <strong>Intermedio:</strong> evaluación técnica general ·{' '}
+                <strong>Avanzado:</strong> pruebas técnicas específicas · <strong>Experto:</strong> evaluación profunda con casos de uso.
+                El agente de IA ajusta el rigor de su análisis según este nivel.
+              </p>
             </div>
 
             <div className="space-y-4">
@@ -914,6 +922,7 @@ export default function NewVacancyPage() {
                   value={formData.currency}
                   onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
                 >
+                  <option value="HNL">HNL (Lempiras)</option>
                   <option value="MXN">MXN (Pesos)</option>
                   <option value="USD">USD (Dólares)</option>
                   <option value="EUR">EUR (Euros)</option>

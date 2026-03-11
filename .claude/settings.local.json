@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \":*)",
+      "Bash(grep -n \"Descriptor de Puesto\\\\|jobDescriptor\\\\|descriptorFile\\\\|uploadingFile\\\\|Adjuntar\" app/dashboard/vacancies/[id]/page.tsx)",
+      "Bash(grep -n \"^import\" app/dashboard/vacancies/[id]/page.tsx)",
+      "Bash(node scripts/create-users.js)"
+    ]
+  }
+}
