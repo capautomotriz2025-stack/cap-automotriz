@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB, { isMongoDBAvailable } from '@/lib/mongodb';
 import Candidate from '@/models/Candidate';
+import Vacancy from '@/models/Vacancy'; // needed for populate('vacancyId')
 import { mockCandidates, usingMockData } from '@/lib/mock-data';
 
 export async function GET(request: NextRequest) {
