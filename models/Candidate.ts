@@ -12,6 +12,9 @@ export interface ICandidate extends Document {
   aiScore: number; // 1-100
   aiClassification: 'ideal' | 'potencial' | 'no perfila';
   aiJustification?: string;
+  aiSummary?: string;
+  aiStrengths?: string[];
+  aiConcerns?: string[];
   
   // Estado del proceso
   status: 'applied' | 'screening' | 'interview' | 'evaluation' | 'interview-boss' | 'offer' | 'hired' | 'rejected' | 'declined';
@@ -93,7 +96,10 @@ const CandidateSchema = new Schema<ICandidate>({
     default: 'no perfila'
   },
   aiJustification: { type: String },
-  
+  aiSummary: { type: String },
+  aiStrengths: [{ type: String }],
+  aiConcerns: [{ type: String }],
+
   status: { 
     type: String, 
     enum: ['applied', 'screening', 'interview', 'evaluation', 'interview-boss', 'offer', 'hired', 'rejected', 'declined'],

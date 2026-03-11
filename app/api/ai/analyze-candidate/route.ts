@@ -66,6 +66,9 @@ export async function POST(request: NextRequest) {
     candidate.aiScore = score;
     candidate.aiClassification = mappedClassification;
     candidate.aiJustification = analysis.summary || analysis.justification;
+    candidate.aiSummary = analysis.summary || analysis.justification;
+    candidate.aiStrengths = analysis.strengths || [];
+    candidate.aiConcerns = analysis.concerns || [];
     await candidate.save();
 
     // Crear notificación de fin de análisis IA (solo la primera vez que se obtiene score)

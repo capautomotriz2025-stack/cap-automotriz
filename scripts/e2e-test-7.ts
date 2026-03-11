@@ -35,8 +35,13 @@ const CV_PATH =
   'c:/Users/fiona/Downloads/cv_2025_us-1.pdf'; // PDF real de Luciano por default
 
 const USE_REAL_PDF = fs.existsSync(CV_PATH);
-const CANDIDATE_NAME = USE_REAL_PDF ? 'Luciano Mastrangelo' : `Candidato ${TEST_NAME}`;
-const CANDIDATE_EMAIL = USE_REAL_PDF ? 'luciano.mastran@gmail.com' : `candidato-${TEST_NUMBER}@test.com`;
+const IS_EJEMPLO = CV_PATH.includes('cv_ejemplo');
+const CANDIDATE_NAME = USE_REAL_PDF
+  ? (IS_EJEMPLO ? 'Oscar Doney Méndez' : 'Luciano Mastrangelo')
+  : `Candidato ${TEST_NAME}`;
+const CANDIDATE_EMAIL = USE_REAL_PDF
+  ? (IS_EJEMPLO ? 'martinezmendez2024@gmail.com' : 'luciano.mastran@gmail.com')
+  : `candidato-${TEST_NUMBER}@test.com`;
 
 const educationLevelToMinLevel: Record<
   string,
