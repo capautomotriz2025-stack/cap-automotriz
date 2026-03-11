@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import AIAgent from '@/models/AIAgent';
+import { aiAgentTemplates } from '@/lib/ai-agent-templates';
 import { analyzeCandidateCV } from '@/lib/openai';
 import pdfParse from 'pdf-parse';
 
@@ -39,9 +40,25 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       );
     }
 
-    // Obtener el agente
+    // Obtener el agente — puede ser template (string ID) o custom (ObjectId)
     await connectDB();
-    const agent = await AIAgent.findById(params.id);
+    let agent: any = null;
+
+    // Intentar buscar en templates primero (IDs como "agent-template-1")
+    if (params.id.startsWith('agent-template')) {
+      const templateIndex = parseInt(params.id.split('-').pop() || '1') - 1;
+      agent = aiAgentTemplates[templateIndex] || aiAgentTemplates.find((t: any) => t._id === params.id);
+    }
+
+    // Si no es template, buscar en DB
+    if (!agent) {
+      try {
+        agent = await AIAgent.findById(params.id);
+      } catch {
+        // ID inválido para ObjectId
+      }
+    }
+
     if (!agent) {
       return NextResponse.json({ success: false, error: 'Agente no encontrado' }, { status: 404 });
     }
