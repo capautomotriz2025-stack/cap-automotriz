@@ -45,9 +45,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Re-analizar candidato
+    const jobDescription =
+      vacancy.optimizedDescription ||
+      vacancy.description ||
+      vacancy.mainFunctions ||
+      vacancy.title ||
+      'Puesto de trabajo';
+
     const analysis = await analyzeCandidateCV(
       candidate.cvText || `CV de ${candidate.fullName}`,
-      vacancy.optimizedDescription || vacancy.description,
+      jobDescription,
       vacancy.requiredSkills || [],
       aiAgent
     );
