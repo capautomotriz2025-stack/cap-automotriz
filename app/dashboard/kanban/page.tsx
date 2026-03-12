@@ -88,7 +88,7 @@ export default function KanbanPage() {
               placeholder="Buscar por plaza o departamento..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 bg-background border-white/30 text-white placeholder:text-white/50 focus:border-white"
+              className="pl-9 bg-cap-gray-dark border-white/30 text-white placeholder:text-white/40 focus:border-white"
             />
           </div>
           <Button variant="outline" onClick={fetchCandidates} className="bg-cap-gray-dark border-white/30 text-white hover:bg-cap-gray-dark hover:border-cap-red hover:text-cap-red font-bold shrink-0">
