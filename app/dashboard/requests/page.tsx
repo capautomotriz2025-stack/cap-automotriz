@@ -326,7 +326,7 @@ export default function RequestsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="numberOfPositions">Número de Plaza *</Label>
+                <Label htmlFor="numberOfPositions">Número de Plazas *</Label>
                 <Input
                   id="numberOfPositions"
                   type="number"
@@ -335,6 +335,9 @@ export default function RequestsPage() {
                   value={formData.numberOfPositions}
                   onChange={(e) => setFormData({ ...formData, numberOfPositions: e.target.value })}
                 />
+                <p className="text-xs text-muted-foreground">
+                  <strong>Nota:</strong> el valor incluye las plazas existentes más las nuevas que se están solicitando.
+                </p>
               </div>
             </div>
 
@@ -462,15 +465,22 @@ export default function RequestsPage() {
                   <option value="avanzado">Avanzado</option>
                   <option value="experto">Experto</option>
                 </select>
+                <p className="text-xs text-muted-foreground">
+                  <strong>Básico:</strong> screening general, verifica requisitos mínimos. &nbsp;
+                  <strong>Intermedio:</strong> evalúa experiencia y habilidades técnicas relevantes. &nbsp;
+                  <strong>Avanzado:</strong> análisis profundo de competencias y trayectoria. &nbsp;
+                  <strong>Experto:</strong> evaluación rigurosa con criterios especializados de alto nivel.
+                  El agente de IA ajustará el rigor de su análisis según el nivel seleccionado.
+                </p>
               </div>
 
               <div className="space-y-2">
-                <Label>Profesiones requeridas * (al menos una)</Label>
+                <Label>Profesiones / Oficios * (al menos una)</Label>
                 <div className="grid md:grid-cols-3 gap-4">
                   {formData.requiredProfessions.map((profession, index) => (
                     <Input
                       key={index}
-                      placeholder={`Profesión ${index + 1}`}
+                      placeholder={`Profesión / Oficio ${index + 1}`}
                       value={profession}
                       onChange={(e) => {
                         const newProfessions = [...formData.requiredProfessions];
