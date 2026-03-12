@@ -1,21 +1,26 @@
 import OpenAI from 'openai';
 
-// Verificar si OpenAI está disponible
-const OPENAI_AVAILABLE = !!process.env.OPENAI_API_KEY;
+// Carga la API key: primero process.env (que puede ser sobrescrito por la DB via /api/settings)
+function getApiKey(): string {
+  return process.env.OPENAI_API_KEY || 'dummy-key-for-build';
+}
 
-// Inicializar OpenAI con una key dummy si no está disponible (para evitar errores en build)
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || 'dummy-key-for-build',
-});
-
-// Helper para verificar disponibilidad
 function checkOpenAIAvailable(functionName: string): boolean {
-  if (!OPENAI_AVAILABLE) {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key || key === 'dummy-key-for-build') {
     console.log(`⚠️  ${functionName}: OpenAI no disponible (requiere OPENAI_API_KEY)`);
     return false;
   }
   return true;
 }
+
+// Cliente OpenAI — usa siempre la key activa de process.env
+function getClient(): OpenAI {
+  return new OpenAI({ apiKey: getApiKey() });
+}
+
+// Alias para compatibilidad con código existente
+const openai = new OpenAI({ apiKey: getApiKey() });
 
 export async function optimizeJobDescription(description: string, role: string) {
   if (!checkOpenAIAvailable('optimizeJobDescription')) {
@@ -23,7 +28,7 @@ export async function optimizeJobDescription(description: string, role: string) 
   }
 
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await getClient().chat.completions.create({
       model: "gpt-4",
       messages: [
         {
@@ -80,7 +85,7 @@ export async function analyzeCandidateCV(
             "concerns": ["Preocupación 1"]
           }`;
 
-    const completion = await openai.chat.completions.create({
+    const completion = await getClient().chat.completions.create({
       model: "gpt-4",
       messages: [
         {
@@ -132,7 +137,7 @@ Por favor, configura OPENAI_API_KEY en tus variables de entorno para habilitar e
   }
 
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await getClient().chat.completions.create({
       model: "gpt-4",
       messages: [
         {
@@ -169,7 +174,7 @@ export async function suggestCandidateProfile(jobTitle: string, industry: string
   }
 
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await getClient().chat.completions.create({
       model: "gpt-4",
       messages: [
         {

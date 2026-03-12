@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, Loader2, Plus, Edit2, Trash2, UserPlus, Shield, User as UserIcon, X } from 'lucide-react';
+import { AlertCircle, Loader2, Plus, Edit2, Trash2, UserPlus, Shield, User as UserIcon, X, Key, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 
 export default function UsersPage() {
   const { data: session } = useSession();
@@ -20,6 +20,14 @@ export default function UsersPage() {
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
+
+  // OpenAI Key state
+  const [keyInfo, setKeyInfo] = useState<any>(null);
+  const [newApiKey, setNewApiKey] = useState('');
+  const [showKeyInput, setShowKeyInput] = useState(false);
+  const [keyVisible, setKeyVisible] = useState(false);
+  const [keySaving, setKeySaving] = useState(false);
+  const [keyMsg, setKeyMsg] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -37,7 +45,47 @@ export default function UsersPage() {
 
   useEffect(() => {
     fetchUsers();
+    fetchKeyInfo();
   }, []);
+
+  const fetchKeyInfo = async () => {
+    try {
+      const res = await axios.get('/api/settings');
+      if (res.data.success) setKeyInfo(res.data.data);
+    } catch {}
+  };
+
+  const handleSaveKey = async () => {
+    if (!newApiKey.trim()) return;
+    setKeySaving(true);
+    setKeyMsg('');
+    try {
+      const res = await axios.post('/api/settings', { apiKey: newApiKey.trim() });
+      if (res.data.success) {
+        setKeyMsg('✅ API Key guardada correctamente.');
+        setNewApiKey('');
+        setShowKeyInput(false);
+        fetchKeyInfo();
+      } else {
+        setKeyMsg('❌ ' + res.data.error);
+      }
+    } catch (e: any) {
+      setKeyMsg('❌ ' + (e.response?.data?.error || 'Error al guardar'));
+    } finally {
+      setKeySaving(false);
+    }
+  };
+
+  const handleDeleteKey = async () => {
+    if (!confirm('¿Eliminar la API Key de la base de datos? Se usará la variable de entorno.')) return;
+    try {
+      await axios.delete('/api/settings');
+      setKeyMsg('🗑️ Key eliminada. Usando variable de entorno.');
+      fetchKeyInfo();
+    } catch (e: any) {
+      setKeyMsg('❌ ' + (e.response?.data?.error || 'Error al eliminar'));
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -341,6 +389,105 @@ export default function UsersPage() {
           </Card>
         </div>
       )}
+
+      {/* Configuración OpenAI API Key */}
+      <Card className="border-2 border-yellow-500/30 bg-yellow-500/5">
+        <CardHeader>
+          <CardTitle className="text-xl font-black text-white flex items-center gap-2">
+            <Key className="h-5 w-5 text-yellow-400" />
+            Configuración OpenAI API Key
+          </CardTitle>
+          <CardDescription className="text-cap-gray-lightest">
+            Gestioná la API Key de OpenAI usada para análisis de candidatos y generación de contenido.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+
+          {/* Estado actual */}
+          {keyInfo && (
+            <div className="p-4 rounded-lg bg-cap-black border border-cap-gray space-y-2">
+              <p className="text-xs font-bold text-cap-gray-lightest uppercase tracking-wide">Key activa</p>
+              <div className="flex items-center gap-3">
+                <div className={`w-2.5 h-2.5 rounded-full ${keyInfo.source === 'none' ? 'bg-red-500' : 'bg-green-400'}`} />
+                <span className="text-sm font-semibold text-white font-mono">
+                  {keyInfo.maskedKey || 'Sin key configurada'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 mt-1">
+                <span className={`text-xs px-2 py-0.5 rounded font-bold ${keyInfo.source === 'database' ? 'bg-blue-500/20 text-blue-300' : keyInfo.source === 'environment' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
+                  {keyInfo.source === 'database' ? '📦 Desde base de datos' : keyInfo.source === 'environment' ? '🔧 Variable de entorno (.env)' : '❌ No configurada'}
+                </span>
+                {keyInfo.lastUpdated && (
+                  <span className="text-xs text-cap-gray-lightest">
+                    Actualizada: {new Date(keyInfo.lastUpdated).toLocaleDateString('es-HN')}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Mensaje de feedback */}
+          {keyMsg && (
+            <p className="text-sm text-cap-gray-lightest bg-cap-black border border-cap-gray rounded-lg px-3 py-2">
+              {keyMsg}
+            </p>
+          )}
+
+          {/* Formulario nueva key */}
+          {showKeyInput && (
+            <div className="space-y-3 p-4 rounded-lg bg-cap-black border border-yellow-500/30">
+              <Label className="text-white font-bold">Nueva API Key</Label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    type={keyVisible ? 'text' : 'password'}
+                    placeholder="sk-proj-..."
+                    value={newApiKey}
+                    onChange={(e) => setNewApiKey(e.target.value)}
+                    className="pr-10 font-mono text-sm bg-cap-gray-dark border-white/20 text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setKeyVisible(!keyVisible)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-cap-gray-lightest hover:text-white"
+                  >
+                    {keyVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                La key se guarda en la base de datos y tiene prioridad sobre la variable de entorno.
+              </p>
+              <div className="flex gap-2">
+                <Button onClick={handleSaveKey} disabled={keySaving || !newApiKey.trim()} size="sm" className="bg-yellow-600 hover:bg-yellow-500 text-white font-bold">
+                  {keySaving ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Guardando...</> : <><CheckCircle2 className="h-3 w-3 mr-1" />Guardar Key</>}
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => { setShowKeyInput(false); setNewApiKey(''); }} className="border-cap-gray text-cap-gray-lightest">
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Acciones */}
+          <div className="flex gap-2 flex-wrap">
+            {!showKeyInput && (
+              <Button onClick={() => { setShowKeyInput(true); setKeyMsg(''); }} size="sm" variant="outline" className="border-yellow-500/50 text-yellow-300 hover:bg-yellow-500/10 font-bold">
+                <Key className="h-4 w-4 mr-2" />
+                {keyInfo?.hasDbKey ? 'Cambiar API Key' : 'Cargar API Key'}
+              </Button>
+            )}
+            {keyInfo?.hasDbKey && !showKeyInput && (
+              <Button onClick={handleDeleteKey} size="sm" variant="outline" className="border-red-500/50 text-red-400 hover:bg-red-500/10 font-bold">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Eliminar key de DB
+              </Button>
+            )}
+          </div>
+
+        </CardContent>
+      </Card>
+
     </div>
   );
 }

@@ -7,10 +7,10 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
-  LayoutDashboard, 
-  Briefcase, 
-  Users, 
-  Kanban, 
+  LayoutDashboard,
+  Briefcase,
+  Users,
+  Kanban,
   Bell,
   Zap,
   LogOut,
@@ -21,7 +21,8 @@ import {
   Gauge,
   Loader2,
   FileText,
-  Home
+  Home,
+  Key
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -35,6 +36,7 @@ const baseNavigation = [
   { name: 'Kanban', href: '/dashboard/kanban', icon: Kanban, badge: null, role: null },
   { name: 'Agentes IA', href: '/dashboard/ai-agents', icon: Bot, badge: 'IA', role: null },
   { name: 'Usuarios', href: '/dashboard/users', icon: UserCog, badge: 'Admin', role: 'superadmin' },
+  { name: 'API Key', href: '/dashboard/apikey', icon: Key, badge: null, role: 'superadmin' },
   { name: 'Notificaciones', href: '/dashboard/notifications', icon: Bell, badge: null, role: null },
   { name: 'BD Candidatos', href: '/dashboard/cvs-by-process', icon: FileText, badge: null, role: null },
 ];
