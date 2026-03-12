@@ -91,7 +91,7 @@ export default function KanbanPage() {
               className="pl-9 bg-background border-white/30 text-white placeholder:text-white/50 focus:border-white"
             />
           </div>
-          <Button variant="outline" onClick={fetchCandidates} className="border-white/30 text-white hover:border-cap-red hover:text-cap-red font-bold shrink-0">
+          <Button variant="outline" onClick={fetchCandidates} className="bg-cap-gray-dark border-white/30 text-white hover:bg-cap-gray-dark hover:border-cap-red hover:text-cap-red font-bold shrink-0">
             <RefreshCw className="mr-2 h-4 w-4" />
             Actualizar
           </Button>
