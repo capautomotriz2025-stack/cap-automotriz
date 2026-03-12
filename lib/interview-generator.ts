@@ -178,7 +178,7 @@ async function generateInterviewPDF(
     });
     yPosition -= 25;
     
-    page.drawText(`Nombre: ${candidate.fullName}`, {
+    page.drawText(sanitize(`Nombre: ${candidate.fullName}`), {
       x: margin + 20,
       y: yPosition,
       size: 12,
@@ -186,8 +186,8 @@ async function generateInterviewPDF(
       color: rgb(0, 0, 0),
     });
     yPosition -= 20;
-    
-    page.drawText(`Email: ${candidate.email}`, {
+
+    page.drawText(sanitize(`Email: ${candidate.email}`), {
       x: margin + 20,
       y: yPosition,
       size: 12,
@@ -195,8 +195,8 @@ async function generateInterviewPDF(
       color: rgb(0, 0, 0),
     });
     yPosition -= 20;
-    
-    page.drawText(`Teléfono: ${candidate.phone}`, {
+
+    page.drawText(sanitize(`Teléfono: ${candidate.phone}`), {
       x: margin + 20,
       y: yPosition,
       size: 12,
@@ -204,8 +204,8 @@ async function generateInterviewPDF(
       color: rgb(0, 0, 0),
     });
     yPosition -= 20;
-    
-    page.drawText(`Puntaje IA: ${candidate.aiScore}/100 - ${candidate.aiClassification}`, {
+
+    page.drawText(sanitize(`Puntaje IA: ${candidate.aiScore}/100 - ${candidate.aiClassification}`), {
       x: margin + 20,
       y: yPosition,
       size: 12,
@@ -224,7 +224,7 @@ async function generateInterviewPDF(
     });
     yPosition -= 25;
     
-    page.drawText(`Puesto: ${vacancy.title}`, {
+    page.drawText(sanitize(`Puesto: ${vacancy.title}`), {
       x: margin + 20,
       y: yPosition,
       size: 12,
@@ -232,8 +232,8 @@ async function generateInterviewPDF(
       color: rgb(0, 0, 0),
     });
     yPosition -= 20;
-    
-    page.drawText(`Departamento: ${vacancy.department}`, {
+
+    page.drawText(sanitize(`Departamento: ${vacancy.department}`), {
       x: margin + 20,
       y: yPosition,
       size: 12,
@@ -241,9 +241,9 @@ async function generateInterviewPDF(
       color: rgb(0, 0, 0),
     });
     yPosition -= 20;
-    
+
     if (vacancy.requiredProfession) {
-      page.drawText(`Profesión Requerida: ${vacancy.requiredProfession}`, {
+      page.drawText(sanitize(`Profesión Requerida: ${vacancy.requiredProfession}`), {
         x: margin + 20,
         y: yPosition,
         size: 12,
@@ -371,11 +371,22 @@ async function generateInterviewPDF(
 }
 
 /**
+ * Limpia el texto eliminando caracteres de control no soportados por WinAnsi
+ */
+function sanitize(text: string): string {
+  return (text || '')
+    .replace(/[\r\n\t]/g, ' ')   // saltos de línea y tabs → espacio
+    .replace(/[^\x20-\xFF]/g, '') // eliminar caracteres fuera del rango WinAnsi
+    .replace(/  +/g, ' ')         // colapsar múltiples espacios
+    .trim();
+}
+
+/**
  * Función auxiliar para dividir texto en líneas
  * Usa una aproximación basada en caracteres (Helvetica ~0.6 * fontSize por carácter)
  */
 function wrapText(text: string, maxWidth: number, fontSize: number, font: any): string[] {
-  const words = text.split(' ');
+  const words = sanitize(text).split(' ');
   const lines: string[] = [];
   let currentLine = '';
 
