@@ -7,7 +7,13 @@
       "Bash(grep -n \"generate-cv\\\\|genericCv\\\\|generic-cv\\\\|descargar\\\\|download\\\\|generarCV\\\\|generateCv\" app/dashboard/candidates/[id]/page.tsx)",
       "Bash(xargs grep -l \"pdf\\\\|extract\")",
       "Bash(sed -n '200,250p' /c/Users/fiona/OneDrive/Escritorio/cap-vs/cap-automotriz/app/dashboard/vacancies/[id]/page.tsx)",
-      "Bash(sed -n '350,400p' /c/Users/fiona/OneDrive/Escritorio/cap-vs/cap-automotriz/app/dashboard/vacancies/[id]/page.tsx)"
+      "Bash(sed -n '350,400p' /c/Users/fiona/OneDrive/Escritorio/cap-vs/cap-automotriz/app/dashboard/vacancies/[id]/page.tsx)",
+      "Bash(node -e \":*)",
+      "Bash(BASE_URL=https://cap-automotriz.vercel.app TEST_NUMBER=16 CV_PATH=\"c:/Users/fiona/OneDrive/Escritorio/cap-vs/cap-automotriz/cv_ejemplo.pdf\" npx tsx scripts/e2e-test-7.ts)",
+      "Bash(BASE_URL=https://cap-automotriz.vercel.app TEST_NUMBER=17 CV_PATH=\"c:/Users/fiona/OneDrive/Escritorio/cap-vs/cap-automotriz/cv_ejemplo.pdf\" npx tsx scripts/e2e-test-7.ts)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(grep -n \"drawText\\\\|wrapText\\\\|sanitize\\\\|replace\\\\|\\\\\\\\n\\\\|newline\" \"c:/Users/fiona/OneDrive/Escritorio/cap-vs/cap-automotriz/lib/interview-generator.ts\")",
+      "Bash(node scripts/test-local-flow.js)"
     ]
   }
 }

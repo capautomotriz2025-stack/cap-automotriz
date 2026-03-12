@@ -89,8 +89,15 @@ ${cvText}`,
     const match = raw.match(/\{[\s\S]*\}/);
     if (!match) return fallbackExtract(cvText);
     const parsed = JSON.parse(match[0]);
-    // Fusionar con fallback para asegurar que todos los campos existan
-    return { ...fallback, ...parsed };
+    // Fusionar con fallback y normalizar arrays (OpenAI puede devolver null en campos de array)
+    return {
+      ...fallback,
+      ...parsed,
+      previousJobs: Array.isArray(parsed.previousJobs) ? parsed.previousJobs : fallback.previousJobs,
+      education: Array.isArray(parsed.education) ? parsed.education : fallback.education,
+      skills: Array.isArray(parsed.skills) ? parsed.skills : fallback.skills,
+      languages: Array.isArray(parsed.languages) ? parsed.languages : fallback.languages,
+    };
   } catch (err) {
     console.error('⚠️ extractCVDataWithAI error, usando fallback:', err);
     return fallbackExtract(cvText);
