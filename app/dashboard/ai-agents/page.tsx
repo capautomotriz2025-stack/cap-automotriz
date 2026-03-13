@@ -92,9 +92,10 @@ export default function AIAgentsPage() {
       await axios.delete(`/api/ai-agents/${agentId}`);
       setAgents(agents.filter(a => a._id !== agentId));
       alert('Agente eliminado exitosamente');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting agent:', error);
-      alert('Error al eliminar el agente');
+      const msg = error.response?.data?.error || 'Error al eliminar el agente';
+      alert(`Error: ${msg}`);
     }
   };
 

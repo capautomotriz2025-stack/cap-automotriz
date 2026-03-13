@@ -135,8 +135,8 @@ export async function DELETE(
       );
     }
     
-    // No permitir eliminar templates
-    if (agent.isTemplate) {
+    // No permitir eliminar plantillas del sistema (solo las creadas por 'system')
+    if (agent.isTemplate && agent.createdBy === 'system') {
       return NextResponse.json(
         { success: false, error: 'No se pueden eliminar plantillas del sistema' },
         { status: 403 }
