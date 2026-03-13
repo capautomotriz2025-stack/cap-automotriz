@@ -126,15 +126,24 @@ export async function DELETE(
       return NextResponse.json({ success: true, data: {}, mock: true });
     }
     
+    // Validar que sea un ObjectId válido antes de consultar MongoDB
+    const mongoose = (await import('mongoose')).default;
+    if (!mongoose.Types.ObjectId.isValid(params.id)) {
+      return NextResponse.json(
+        { success: false, error: 'Este agente es una plantilla del sistema y no puede eliminarse' },
+        { status: 403 }
+      );
+    }
+
     const agent = await AIAgent.findById(params.id);
-    
+
     if (!agent) {
       return NextResponse.json(
         { success: false, error: 'Agente no encontrado' },
         { status: 404 }
       );
     }
-    
+
     // No permitir eliminar plantillas del sistema (solo las creadas por 'system')
     if (agent.isTemplate && agent.createdBy === 'system') {
       return NextResponse.json(

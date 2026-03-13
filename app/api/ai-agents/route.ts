@@ -9,6 +9,8 @@ import { generateSystemPrompt } from '@/lib/prompt-generator';
 let mockAgents = aiAgentTemplates.map((template, index) => ({
   ...template,
   _id: (template as any)._id || `agent-template-${index + 1}`,
+  isTemplate: true,
+  createdBy: 'system',
   createdAt: (template as any).createdAt || `2025-01-${10 + index}T00:00:00.000Z`,
   updatedAt: (template as any).updatedAt || `2025-01-${10 + index}T00:00:00.000Z`,
 }));
