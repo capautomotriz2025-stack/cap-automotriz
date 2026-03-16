@@ -169,13 +169,6 @@ export default function RequestsPage() {
         return;
       }
 
-      // Validar descriptor de puesto obligatorio
-      if (!formData.jobDescriptorFileUrl && !formData.jobDescriptorFile) {
-        alert('Debe adjuntar el descriptor de puesto (archivo PDF).');
-        setLoading(false);
-        return;
-      }
-
       // Subir archivo si existe
       let jobDescriptorUrl = formData.jobDescriptorFileUrl;
       if (formData.jobDescriptorFile && !jobDescriptorUrl) {
@@ -559,7 +552,7 @@ export default function RequestsPage() {
 
             {/* Descriptor de Puesto */}
             <div className="space-y-2 pt-4 border-t border-cap-gray">
-              <Label htmlFor="jobDescriptor">Descriptor de Puesto *</Label>
+              <Label htmlFor="jobDescriptor">Descriptor de Puesto</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="jobDescriptor"
