@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,7 @@ import {
 } from 'lucide-react';
 
 export default function AIAgentsPage() {
+  const router = useRouter();
   const [agents, setAgents] = useState<any[]>([]);
   const [filteredAgents, setFilteredAgents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,9 +46,15 @@ export default function AIAgentsPage() {
   const [evalLoading, setEvalLoading] = useState(false);
   const [evalResult, setEvalResult] = useState<any>(null);
   const [evalError, setEvalError] = useState('');
+  const [evalName, setEvalName] = useState('');
+  const [evalEmail, setEvalEmail] = useState('');
+  const [evalPhone, setEvalPhone] = useState('');
+  const [evalVacancyId, setEvalVacancyId] = useState('');
+  const [vacancies, setVacancies] = useState<any[]>([]);
 
   useEffect(() => {
     fetchAgents();
+    axios.get('/api/vacancies').then(r => { if (r.data.success) setVacancies(r.data.data); }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -109,22 +117,40 @@ export default function AIAgentsPage() {
     setEvalFile(null);
     setEvalResult(null);
     setEvalError('');
+    setEvalName('');
+    setEvalEmail('');
+    setEvalPhone('');
+    setEvalVacancyId('');
     setIsEvalModalOpen(true);
   };
 
   const handleEvaluateCV = async () => {
     if (!evalFile || !evalAgent) return;
+    if (!evalName.trim() || !evalEmail.trim() || !evalPhone.trim() || !evalVacancyId) {
+      setEvalError('Completá los datos del candidato y seleccioná una vacante para guardar la evaluación.');
+      return;
+    }
     setEvalLoading(true);
     setEvalResult(null);
     setEvalError('');
     try {
       const form = new FormData();
       form.append('cv', evalFile);
+      form.append('name', evalName.trim());
+      form.append('email', evalEmail.trim());
+      form.append('phone', evalPhone.trim());
+      form.append('vacancyId', evalVacancyId);
       const res = await axios.post(`/api/ai-agents/${evalAgent._id}/evaluate-cv`, form, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       if (res.data.success) {
-        setEvalResult(res.data.data);
+        const candidateId = res.data.data?.candidateId;
+        if (candidateId) {
+          setIsEvalModalOpen(false);
+          router.push(`/dashboard/candidates/${candidateId}`);
+        } else {
+          setEvalResult(res.data.data);
+        }
       } else {
         setEvalError(res.data.error || 'Error al evaluar el CV');
       }
@@ -470,7 +496,7 @@ export default function AIAgentsPage() {
       )}
 
       {/* Modal Evaluar CV */}
-      <Dialog open={isEvalModalOpen} onOpenChange={(o) => { setIsEvalModalOpen(o); if (!o) { setEvalResult(null); setEvalError(''); setEvalFile(null); } }}>
+      <Dialog open={isEvalModalOpen} onOpenChange={(o) => { setIsEvalModalOpen(o); if (!o) { setEvalResult(null); setEvalError(''); setEvalFile(null); setEvalName(''); setEvalEmail(''); setEvalPhone(''); setEvalVacancyId(''); } }}>
         <DialogContent className="max-w-xl bg-cap-gray-dark border-2 border-blue-500 text-white">
           <DialogHeader>
             <DialogTitle className="text-xl font-black text-white flex items-center gap-2">
@@ -478,11 +504,58 @@ export default function AIAgentsPage() {
               Evaluar CV — {evalAgent?.name}
             </DialogTitle>
             <DialogDescription className="text-cap-gray-lightest">
-              Subí un PDF para que el agente lo evalúe automáticamente.
+              Completá los datos del candidato y subí el CV para evaluarlo y guardarlo en evaluados.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 mt-2">
+            {/* Datos del candidato */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <label className="text-xs font-bold text-cap-gray-lightest mb-1 block">Nombre completo *</label>
+                <input
+                  type="text"
+                  value={evalName}
+                  onChange={e => setEvalName(e.target.value)}
+                  placeholder="Juan Pérez"
+                  className="w-full px-3 py-2 rounded-md bg-cap-black border border-cap-gray text-sm text-white placeholder:text-cap-gray focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-cap-gray-lightest mb-1 block">Email *</label>
+                <input
+                  type="email"
+                  value={evalEmail}
+                  onChange={e => setEvalEmail(e.target.value)}
+                  placeholder="juan@ejemplo.com"
+                  className="w-full px-3 py-2 rounded-md bg-cap-black border border-cap-gray text-sm text-white placeholder:text-cap-gray focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-cap-gray-lightest mb-1 block">Teléfono *</label>
+                <input
+                  type="text"
+                  value={evalPhone}
+                  onChange={e => setEvalPhone(e.target.value)}
+                  placeholder="+52 55 0000 0000"
+                  className="w-full px-3 py-2 rounded-md bg-cap-black border border-cap-gray text-sm text-white placeholder:text-cap-gray focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="text-xs font-bold text-cap-gray-lightest mb-1 block">Vacante *</label>
+                <select
+                  value={evalVacancyId}
+                  onChange={e => setEvalVacancyId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-md bg-cap-black border border-cap-gray text-sm text-white focus:outline-none focus:border-blue-500"
+                >
+                  <option value="">Seleccionar vacante...</option>
+                  {vacancies.filter(v => v.status === 'published' || v.status === 'draft').map((v: any) => (
+                    <option key={v._id} value={v._id}>{v.title} — {v.department}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             {/* Upload */}
             <div className="border-2 border-dashed border-blue-500/40 rounded-lg p-4 text-center space-y-2">
               <Upload className="h-8 w-8 text-blue-400 mx-auto" />
