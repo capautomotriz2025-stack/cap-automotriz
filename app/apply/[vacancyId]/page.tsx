@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, Briefcase, MapPin, DollarSign, CheckCircle2, ArrowLeft, Loader2, Sparkles } from 'lucide-react';
+import { AlertCircle, Briefcase, MapPin, DollarSign, CheckCircle2, ArrowLeft, Loader2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import Link from 'next/link';
 
@@ -334,19 +334,17 @@ export default function ApplyPage({ params }: { params: { vacancyId: string } })
                 
                 {/* Botón fijo al final */}
                 <div className="mt-6 space-y-4 pt-6 border-t">
-                  {/* Mensaje de progreso mientras analiza */}
+                  {/* Mensaje de progreso mientras se envía */}
                   {loading && (
                     <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
                       <div className="flex items-start gap-3">
                         <Loader2 className="w-5 h-5 text-blue-600 animate-spin flex-shrink-0 mt-0.5" />
                         <div className="flex-1">
-                          <p className="text-sm font-semibold text-blue-900 flex items-center gap-2">
-                            <Sparkles className="w-4 h-4" />
-                            Analizando tu CV con Inteligencia Artificial
+                          <p className="text-sm font-semibold text-blue-900">
+                            Enviando tu postulación...
                           </p>
-                          <p className="text-xs text-blue-700 mt-2">
-                            Estamos extrayendo el contenido de tu CV y analizándolo con nuestro agente especializado. 
-                            Esto puede tomar entre 10-20 segundos...
+                          <p className="text-xs text-blue-700 mt-1">
+                            Esto puede tomar unos segundos. Por favor no cierres esta página.
                           </p>
                         </div>
                       </div>
@@ -375,7 +373,7 @@ export default function ApplyPage({ params }: { params: { vacancyId: string } })
                       {loading ? (
                         <>
                           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Analizando CV...
+                          Enviando...
                         </>
                       ) : (
                         <>
