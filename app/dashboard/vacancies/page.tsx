@@ -295,10 +295,48 @@ export default function VacanciesPage() {
                            vacancy.positionScale === '8' ? 'Gerencia (8)' : vacancy.positionScale === '9' ? 'Director (9)' :
                            vacancy.positionScale || 'N/A'}
                         </td>
-                        <td className="px-4 py-3 text-sm text-cap-gray-lightest font-semibold">
-                          <Badge variant="outline" className="border-cap-gray text-cap-gray-lightest font-bold">
-                            {vacancy.status === 'published' ? 'Activo' : vacancy.status === 'pending' ? 'Pendiente' : 'Pendiente'}
-                          </Badge>
+                        <td className="px-4 py-3 text-sm">
+                          {(() => {
+                            const SLA_DAYS = 28;
+                            const created = vacancy.createdAt ? new Date(vacancy.createdAt) : null;
+                            if (!created) return <span className="text-cap-gray font-semibold">N/A</span>;
+                            const elapsed = Math.floor((Date.now() - created.getTime()) / (1000 * 60 * 60 * 24));
+                            const remaining = SLA_DAYS - elapsed;
+                            const isClosed = vacancy.status === 'closed';
+                            if (isClosed) {
+                              return (
+                                <div className="flex flex-col gap-0.5">
+                                  <Badge className={`font-bold text-xs w-fit ${elapsed <= SLA_DAYS ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
+                                    {elapsed <= SLA_DAYS ? '✓ A tiempo' : '✗ Fuera de plazo'}
+                                  </Badge>
+                                  <span className="text-xs text-cap-gray">{elapsed}d transcurridos</span>
+                                </div>
+                              );
+                            }
+                            if (remaining < 0) {
+                              return (
+                                <div className="flex flex-col gap-0.5">
+                                  <Badge className="font-bold text-xs w-fit bg-red-500/20 text-red-400 border border-red-500/30">
+                                    {Math.abs(remaining)}d vencido
+                                  </Badge>
+                                  <span className="text-xs text-cap-gray">{elapsed}d / {SLA_DAYS}d</span>
+                                </div>
+                              );
+                            }
+                            const color = remaining <= 7
+                              ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                              : remaining <= 14
+                              ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                              : 'bg-green-500/20 text-green-400 border border-green-500/30';
+                            return (
+                              <div className="flex flex-col gap-0.5">
+                                <Badge className={`font-bold text-xs w-fit ${color}`}>
+                                  {remaining}d restantes
+                                </Badge>
+                                <span className="text-xs text-cap-gray">{elapsed}d / {SLA_DAYS}d</span>
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td className="px-4 py-3 text-sm text-cap-gray-lightest font-semibold capitalize">{vacancy.evaluationLevel || 'N/A'}</td>
                         <td className="px-4 py-3 text-sm">
