@@ -17,6 +17,7 @@ import {
   TrendingDown
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import VacancyTimeChart from '@/components/VacancyTimeChart';
 
 const COLORS = {
   blue: '#3b82f6',
@@ -469,6 +470,10 @@ export default function DashboardPage() {
             data={chartData.byVacancyStatus}
             colors={[COLORS.gray, COLORS.blue, COLORS.green, COLORS.orange]}
           />
+        </div>
+        {/* Tercera fila: tiempo de cobertura */}
+        <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-2">
+          <VacancyTimeChart />
         </div>
       </div>
     </div>
