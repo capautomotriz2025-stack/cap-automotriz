@@ -16,6 +16,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import SandySearch from '@/components/SandySearch';
+import VacancyTimeChart from '@/components/VacancyTimeChart';
 
 export default function InicioPage() {
   const [loading, setLoading] = useState(true);
@@ -64,6 +65,9 @@ export default function InicioPage() {
           </p>
         </div>
       </div>
+
+      {/* Gráfico Tiempo de Cobertura */}
+      <VacancyTimeChart />
 
       {/* Main Grid - Acciones Rápidas y Procesos en Curso */}
       <div className="grid gap-6 lg:grid-cols-3">
