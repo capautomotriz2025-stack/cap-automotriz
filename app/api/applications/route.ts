@@ -51,6 +51,13 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    if ((vacancy as any).timecvExpiresAt && new Date((vacancy as any).timecvExpiresAt) < new Date()) {
+      return NextResponse.json(
+        { success: false, error: 'El período de recepción de CVs para esta vacante ha finalizado.' },
+        { status: 400 }
+      );
+    }
     
     // CONTROL DE DUPLICADOS: Verificar si el candidato ya aplicó
     let existingCandidates: any[] = [];

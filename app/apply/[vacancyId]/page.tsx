@@ -48,6 +48,8 @@ export default function ApplyPage({ params }: { params: { vacancyId: string } })
         
         if (response.data.data.status !== 'published') {
           setError('Esta vacante no está disponible actualmente.');
+        } else if (response.data.data.timecvExpiresAt && new Date(response.data.data.timecvExpiresAt) < new Date()) {
+          setError('El período de recepción de CVs para esta vacante ha finalizado.');
         }
       }
     } catch (error) {
@@ -231,7 +233,7 @@ export default function ApplyPage({ params }: { params: { vacancyId: string } })
               </div>
             )}
             
-            {vacancy?.status === 'published' && (
+            {vacancy?.status === 'published' && !(vacancy?.timecvExpiresAt && new Date(vacancy.timecvExpiresAt) < new Date()) && (
               <form onSubmit={handleSubmit} className="flex flex-col flex-1">
                 <div className="space-y-6 flex-1">
                   <div className="space-y-2">
