@@ -19,6 +19,7 @@ export interface ICandidate extends Document {
   // Estado del proceso
   status: 'applied' | 'screening' | 'interview' | 'evaluation' | 'interview-boss' | 'offer' | 'hired' | 'rejected' | 'declined';
   hiredAt?: Date; // Fecha en que pasó a estado contratado (para Time to Hire/Fill)
+  salaryExpectation?: string; // Aspiración salarial ingresada por el candidato al postularse
 
   // Control de duplicados
   previousApplications?: Array<{
@@ -100,12 +101,13 @@ const CandidateSchema = new Schema<ICandidate>({
   aiStrengths: [{ type: String }],
   aiConcerns: [{ type: String }],
 
-  status: { 
-    type: String, 
+  status: {
+    type: String,
     enum: ['applied', 'screening', 'interview', 'evaluation', 'interview-boss', 'offer', 'hired', 'rejected', 'declined'],
     default: 'applied'
   },
   hiredAt: { type: Date },
+  salaryExpectation: { type: String },
 
   previousApplications: [{
     vacancyId: { type: String, required: true },

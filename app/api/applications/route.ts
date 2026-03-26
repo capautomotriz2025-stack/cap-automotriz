@@ -21,7 +21,8 @@ export async function POST(request: NextRequest) {
     const email = formData.get('email') as string;
     const phone = formData.get('phone') as string;
     const cvFile = formData.get('cv') as File;
-    
+    const salaryExpectation = formData.get('salaryExpectation') as string | null;
+
     if (!vacancyId || !fullName || !email || !phone || !cvFile) {
       return NextResponse.json(
         { success: false, error: 'Todos los campos son requeridos' },
@@ -266,11 +267,12 @@ export async function POST(request: NextRequest) {
         email,
         phone,
         cvUrl,
-        cvText, // Guardar todo el texto extraído del PDF
+        cvText,
         aiScore: aiAnalysis.score,
         aiClassification: mappedClassification,
         aiJustification: aiAnalysis.summary,
         status: 'applied',
+        ...(salaryExpectation ? { salaryExpectation } : {}),
         previousApplications: previousApps,
         isDuplicate: hasActiveApplications,
         duplicateReason: hasActiveApplications ? 'Tiene aplicaciones activas en otros procesos' : undefined

@@ -324,8 +324,9 @@ async function generateGenericCVPDF(
   drawLabelValue('Dirección:', extracted.address || vacancy.location || 'No disponible');
   drawLabelValue('Teléfono:', candidate.phone || 'No disponible');
   drawLabelValue('Correo electrónico:', candidate.email || 'No disponible');
-  if (vacancy.salary?.min) {
-    drawLabelValue('Aspiración salarial:', `${vacancy.salary.min} - ${vacancy.salary.max} ${vacancy.salary.currency || 'MXN'}`);
+  const salaryDisplay = (candidate as any).salaryExpectation;
+  if (salaryDisplay) {
+    drawLabelValue('Aspiración salarial:', salaryDisplay);
   }
   if (extracted.languages.length > 0) {
     drawLabelValue('Idiomas:', extracted.languages.join(', '));
