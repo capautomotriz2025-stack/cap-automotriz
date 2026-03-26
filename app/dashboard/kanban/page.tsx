@@ -98,19 +98,11 @@ export default function KanbanPage() {
         </div>
       </div>
 
-      {/* Kanban Board */}
-      {filteredCandidates.length === 0 ? (
-        <div className="text-center py-16 text-gray-500">
-          {candidates.length === 0
-            ? 'No hay candidatos para mostrar'
-            : 'Ningún candidato coincide con la búsqueda'}
-        </div>
-      ) : (
-        <KanbanBoard
-          candidates={filteredCandidates}
-          onUpdateStatus={handleUpdateStatus}
-        />
-      )}
+      {/* Kanban Board — siempre visible */}
+      <KanbanBoard
+        candidates={filteredCandidates}
+        onUpdateStatus={handleUpdateStatus}
+      />
     </div>
   );
 }
