@@ -299,41 +299,36 @@ export default function VacanciesPage() {
                           {(() => {
                             const SLA_DAYS = 28;
                             const created = vacancy.createdAt ? new Date(vacancy.createdAt) : null;
-                            if (!created) return <span className="text-cap-gray font-semibold">N/A</span>;
+                            if (!created) return <span className="text-cap-gray font-semibold">—</span>;
                             const elapsed = Math.floor((Date.now() - created.getTime()) / (1000 * 60 * 60 * 24));
                             const remaining = SLA_DAYS - elapsed;
+                            const pct = Math.min((elapsed / SLA_DAYS) * 100, 100);
                             const isClosed = vacancy.status === 'closed';
+
                             if (isClosed) {
+                              const ok = elapsed <= SLA_DAYS;
                               return (
-                                <div className="flex flex-col gap-0.5">
-                                  <Badge className={`font-bold text-xs w-fit ${elapsed <= SLA_DAYS ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
-                                    {elapsed <= SLA_DAYS ? '✓ A tiempo' : '✗ Fuera de plazo'}
-                                  </Badge>
-                                  <span className="text-xs text-cap-gray">{elapsed}d transcurridos</span>
-                                </div>
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-black ${ok ? 'bg-green-500/15 text-green-400' : 'bg-red-500/15 text-red-400'}`}>
+                                  {ok ? '✓ A tiempo' : '✗ Fuera de plazo'}
+                                </span>
                               );
                             }
-                            if (remaining < 0) {
-                              return (
-                                <div className="flex flex-col gap-0.5">
-                                  <Badge className="font-bold text-xs w-fit bg-red-500/20 text-red-400 border border-red-500/30">
-                                    {Math.abs(remaining)}d vencido
-                                  </Badge>
-                                  <span className="text-xs text-cap-gray">{elapsed}d / {SLA_DAYS}d</span>
-                                </div>
-                              );
-                            }
-                            const color = remaining <= 7
-                              ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-                              : remaining <= 14
-                              ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
-                              : 'bg-green-500/20 text-green-400 border border-green-500/30';
+
+                            const barColor = remaining < 0 ? '#ef4444' : remaining <= 7 ? '#f97316' : remaining <= 14 ? '#eab308' : '#22c55e';
+                            const textColor = remaining < 0 ? 'text-red-400' : remaining <= 7 ? 'text-orange-400' : remaining <= 14 ? 'text-yellow-400' : 'text-green-400';
+                            const label = remaining < 0
+                              ? `Venció hace ${Math.abs(remaining)}d`
+                              : remaining === 0
+                              ? 'Vence hoy'
+                              : `${remaining}d para vencer`;
+
                             return (
-                              <div className="flex flex-col gap-0.5">
-                                <Badge className={`font-bold text-xs w-fit ${color}`}>
-                                  {remaining}d restantes
-                                </Badge>
-                                <span className="text-xs text-cap-gray">{elapsed}d / {SLA_DAYS}d</span>
+                              <div className="flex flex-col gap-1 min-w-[90px]">
+                                <span className={`text-xs font-black ${textColor}`}>{label}</span>
+                                <div className="w-full h-1.5 rounded-full bg-cap-gray/30 overflow-hidden">
+                                  <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: barColor }} />
+                                </div>
+                                <span className="text-[10px] text-cap-gray font-semibold">Día {Math.min(elapsed, SLA_DAYS)} de {SLA_DAYS}</span>
                               </div>
                             );
                           })()}
