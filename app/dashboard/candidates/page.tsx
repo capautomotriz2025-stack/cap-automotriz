@@ -46,16 +46,24 @@ export default function CandidatesPage() {
   // Filtros
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterClassification, setFilterClassification] = useState('all');
+  const [filterVacancy, setFilterVacancy] = useState('all');
 
   useEffect(() => {
     fetchCandidates();
   }, []);
 
+  // Lista de puestos únicos para el filtro
+  const vacancyOptions = useMemo(() => {
+    const titles = candidates
+      .map(c => c.vacancyId?.title || c.vacancyTitle || null)
+      .filter(Boolean) as string[];
+    return [...new Set(titles)].sort();
+  }, [candidates]);
+
   // Filtrado y paginación
   const filteredAndPaginatedCandidates = useMemo(() => {
     let filtered = candidates;
 
-    // Filtro por búsqueda
     if (searchTerm) {
       filtered = filtered.filter(c =>
         c.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -63,30 +71,33 @@ export default function CandidatesPage() {
       );
     }
 
-    // Filtro por estado
     if (filterStatus !== 'all') {
       filtered = filtered.filter(c => c.status === filterStatus);
     }
 
-    // Filtro por clasificación
     if (filterClassification !== 'all') {
       filtered = filtered.filter(c => c.aiClassification === filterClassification);
     }
 
-    // Calcular paginación
+    if (filterVacancy !== 'all') {
+      filtered = filtered.filter(c =>
+        (c.vacancyId?.title || c.vacancyTitle || '') === filterVacancy
+      );
+    }
+
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const paginated = filtered.slice(startIndex, endIndex);
 
     return { filtered, paginated, totalCount: filtered.length };
-  }, [candidates, searchTerm, filterStatus, filterClassification, currentPage]);
+  }, [candidates, searchTerm, filterStatus, filterClassification, filterVacancy, currentPage]);
 
   const totalPages = Math.ceil(filteredAndPaginatedCandidates.totalCount / itemsPerPage);
 
   // Reset a página 1 cuando cambian los filtros
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterStatus, filterClassification]);
+  }, [searchTerm, filterStatus, filterClassification, filterVacancy]);
 
   const fetchCandidates = async () => {
     try {
@@ -163,7 +174,7 @@ export default function CandidatesPage() {
             <Filter className="w-4 h-4 text-cap-red" />
             <span className="text-sm font-bold text-white uppercase">Filtros</span>
           </div>
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Búsqueda */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-cap-gray" />
@@ -202,6 +213,18 @@ export default function CandidatesPage() {
               <option value="potencial">💡 Potencial</option>
               <option value="no perfila">⚠️ No Perfila</option>
             </select>
+
+            {/* Filtro por Nombre de Puesto */}
+            <select
+              value={filterVacancy}
+              onChange={(e) => setFilterVacancy(e.target.value)}
+              className="px-4 py-2 border-2 border-cap-gray rounded-md bg-cap-black text-white font-bold focus:border-cap-red"
+            >
+              <option value="all">💼 Todos los Puestos</option>
+              {vacancyOptions.map(title => (
+                <option key={title} value={title}>{title}</option>
+              ))}
+            </select>
       </div>
           
           {/* Resumen de filtros */}
@@ -209,14 +232,15 @@ export default function CandidatesPage() {
             <p className="text-sm text-cap-gray-lightest font-semibold">
               Mostrando {filteredAndPaginatedCandidates.paginated.length} de {filteredAndPaginatedCandidates.totalCount} candidatos
             </p>
-            {(filterStatus !== 'all' || filterClassification !== 'all' || searchTerm) && (
-              <Button 
-                size="sm" 
+            {(filterStatus !== 'all' || filterClassification !== 'all' || filterVacancy !== 'all' || searchTerm) && (
+              <Button
+                size="sm"
                 variant="outline"
                 onClick={() => {
                   setSearchTerm('');
                   setFilterStatus('all');
                   setFilterClassification('all');
+                  setFilterVacancy('all');
                 }}
                 className="border-cap-red text-cap-red hover:bg-cap-red hover:text-white font-bold text-xs"
               >
