@@ -99,30 +99,7 @@ export async function generateInterview(
     purpose: 'Evaluar capacidad de adaptación y resiliencia'
   });
 
-  // Asegurar 3 preguntas por categoría (ítem)
-  const questionsByCategory: Record<string, InterviewQuestion[]> = {};
-  baseQuestions.forEach((q) => {
-    if (!questionsByCategory[q.category]) {
-      questionsByCategory[q.category] = [];
-    }
-    questionsByCategory[q.category].push(q);
-  });
-
-  const questions: InterviewQuestion[] = [];
-  Object.entries(questionsByCategory).forEach(([category, qs]) => {
-    if (qs.length >= 3) {
-      questions.push(...qs.slice(0, 3));
-    } else {
-      // Duplicar en ciclo hasta llegar a 3 preguntas por categoría
-      let i = 0;
-      while (questionsByCategory[category].length < 3) {
-        const clone = { ...qs[i % qs.length] };
-        questionsByCategory[category].push(clone);
-        i += 1;
-      }
-      questions.push(...questionsByCategory[category]);
-    }
-  });
+  const questions: InterviewQuestion[] = baseQuestions;
   
   // Generar PDF
   const pdfUrl = await generateInterviewPDF(candidate, vacancy, questions);
