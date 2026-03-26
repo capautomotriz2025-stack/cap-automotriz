@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Bot, Send, Sparkles, Briefcase, User, ArrowRight, Star } from 'lucide-react';
 
-const GREETING = '¡Hola! Soy Sandy, tu agente IA de reclutamiento. Preguntame por vacantes, candidatos o un puesto específico y te muestro los resultados directamente.';
+const GREETING = '¡Hola! Soy Sara, tu agente IA de reclutamiento. Preguntame por vacantes, candidatos o un puesto específico y te muestro los resultados directamente.';
 
 function useTypewriter(text: string, speed = 18) {
   const [displayed, setDisplayed] = useState('');
@@ -115,7 +115,7 @@ export default function SandySearch() {
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-base font-black text-white">Sandy</span>
+                <span className="text-base font-black text-white">Sara</span>
                 <motion.span initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4 }}
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-racing-gradient text-white text-xs font-bold">
                   <Sparkles className="w-3 h-3" /> Agente IA

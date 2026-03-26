@@ -52,7 +52,7 @@ export default function InicioPage() {
 
   return (
     <div className="space-y-8">
-      {/* Sandy – Agente IA */}
+      {/* Sara – Agente IA */}
       <SandySearch />
 
       {/* Header */}
