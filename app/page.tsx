@@ -141,12 +141,12 @@ export default function Home() {
             {[
               { src: '/didasa.png', alt: 'Didasa' },
               { src: '/japan.png', alt: 'Japan' },
-              { src: '/mansiango.png', alt: 'Mansiango' },
+              { src: '/mansiango.png', alt: 'Mansiango', scale: true },
               { src: '/marlon.png', alt: 'Marlon' },
               { src: '/sym.png', alt: 'SYM' },
             ].map((logo) => (
               <div key={logo.alt} className="flex items-center justify-center w-32 h-20 bg-white rounded-2xl p-3 shadow-md">
-                <img src={logo.src} alt={logo.alt} className="max-w-full max-h-full object-contain" />
+                <img src={logo.src} alt={logo.alt} className={`max-w-full max-h-full object-contain ${(logo as any).scale ? 'scale-150' : ''}`} />
               </div>
             ))}
           </div>
