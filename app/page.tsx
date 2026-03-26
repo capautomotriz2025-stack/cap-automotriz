@@ -131,6 +131,28 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Empresas del Grupo */}
+      <section className="py-14 bg-cap-black/70 border-y border-cap-gray/30">
+        <div className="container mx-auto px-4">
+          <p className="text-center text-xs font-black text-cap-gray uppercase tracking-widest mb-8">
+            Empresas del Grupo Automotriz
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-10">
+            {[
+              { src: '/didasa.png', alt: 'Didasa' },
+              { src: '/japan.png', alt: 'Japan' },
+              { src: '/mansiango.png', alt: 'Mansiango' },
+              { src: '/marlon.png', alt: 'Marlon' },
+              { src: '/sym.png', alt: 'SYM' },
+            ].map((logo) => (
+              <div key={logo.alt} className="flex items-center justify-center w-28 h-16 grayscale hover:grayscale-0 opacity-60 hover:opacity-100 transition-all duration-300">
+                <img src={logo.src} alt={logo.alt} className="max-w-full max-h-full object-contain" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Features Section */}
       <section id="features" className="py-24 bg-cap-black/50">
         <div className="container mx-auto px-4">
