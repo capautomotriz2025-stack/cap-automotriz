@@ -26,80 +26,154 @@ export async function generateInterview(
   candidate: ICandidate,
   vacancy: IVacancy
 ): Promise<InterviewData> {
-  const baseQuestions: InterviewQuestion[] = [];
-  
-  // 1. Preguntas técnicas basadas en habilidades requeridas
-  if (vacancy.requiredSkills && vacancy.requiredSkills.length > 0) {
-    vacancy.requiredSkills.slice(0, 3).forEach(skill => {
-      baseQuestions.push({
-        category: 'Técnicas',
-        question: `¿Cuál es tu experiencia con ${skill}? ¿Puedes darnos un ejemplo de un proyecto donde lo hayas utilizado?`,
-        purpose: `Evaluar conocimientos técnicos específicos en ${skill}`
-      });
-    });
-  }
-  
-  // 2. Preguntas de experiencia basadas en el CV genérico
-  if (candidate.genericCV?.summary && candidate.genericCV.summary.length > 0) {
-    const experienceSummary = candidate.genericCV.summary[0];
-    baseQuestions.push({
-      category: 'Experiencia',
-      question: `Según tu experiencia: ${experienceSummary}. ¿Puedes contarnos sobre un desafío específico que hayas enfrentado en tu carrera profesional?`,
-      purpose: 'Evaluar experiencia práctica y capacidad de resolución de problemas'
-    });
-  }
-  
-  // 3. Preguntas basadas en el análisis de IA
-  if (candidate.aiJustification) {
-    baseQuestions.push({
-      category: 'Evaluación',
-      question: `Tu perfil ha sido evaluado con un puntaje de ${candidate.aiScore}/100. ¿Qué aspectos de tu experiencia crees que te hacen un buen candidato para este puesto?`,
-      purpose: 'Validar autoconocimiento y alineación con el perfil requerido'
-    });
-  }
-  
-  // 4. Preguntas específicas del puesto
-  if (vacancy.mainFunctions) {
-    baseQuestions.push({
-      category: 'Funciones del Puesto',
-      question: `Este puesto requiere: ${vacancy.mainFunctions.substring(0, 200)}... ¿Cómo tu experiencia se alinea con estas responsabilidades?`,
-      purpose: 'Evaluar comprensión del rol y capacidad de desempeño'
-    });
-  }
-  
-  // 5. Preguntas de soft skills basadas en áreas de evaluación
-  if (vacancy.evaluationAreas && vacancy.evaluationAreas.length > 0) {
-    vacancy.evaluationAreas.slice(0, 2).forEach(area => {
-      baseQuestions.push({
-        category: 'Habilidades Blandas',
-        question: `Una de las áreas clave de evaluación es ${area.area} (${area.percentage}%). ¿Puedes darnos un ejemplo de cómo has demostrado estas habilidades en tu trabajo anterior?`,
-        purpose: `Evaluar ${area.area}`
-      });
-    });
-  }
-  
-  // 6. Preguntas sobre motivación
-  baseQuestions.push({
-    category: 'Motivación',
-    question: `¿Qué te motiva a aplicar para el puesto de ${vacancy.title} en ${vacancy.department}?`,
-    purpose: 'Evaluar motivación e interés genuino en el puesto'
+  const questions: InterviewQuestion[] = [];
+
+  // ── 1. TÉCNICAS (3 preguntas distintas) ──────────────────────────────────
+  const skills = vacancy.requiredSkills?.slice(0, 3) || [];
+  const skillLabel = skills.length > 0 ? skills.join(', ') : vacancy.requiredProfession || 'el área técnica';
+  questions.push({
+    category: 'Técnicas',
+    question: `¿Cuál es tu nivel de experiencia con ${skillLabel}? Describí un proyecto concreto donde hayas aplicado estas habilidades.`,
+    purpose: 'Evaluar profundidad de conocimientos técnicos requeridos para el puesto',
   });
-  
-  // 7. Preguntas sobre trabajo en equipo
-  baseQuestions.push({
-    category: 'Trabajo en Equipo',
-    question: 'Cuéntanos sobre una situación donde tuviste que trabajar en equipo para resolver un problema complejo. ¿Cuál fue tu rol y cómo contribuiste?',
-    purpose: 'Evaluar habilidades de colaboración y trabajo en equipo'
+  questions.push({
+    category: 'Técnicas',
+    question: `¿Cuál ha sido el desafío técnico más complejo que enfrentaste relacionado con ${skillLabel}? ¿Cómo lo resolviste?`,
+    purpose: 'Evaluar capacidad de resolución de problemas técnicos bajo presión',
   });
-  
-  // 8. Preguntas sobre adaptabilidad
-  baseQuestions.push({
-    category: 'Adaptabilidad',
-    question: 'Describe una situación donde tuviste que adaptarte rápidamente a un cambio inesperado. ¿Cómo manejaste la situación?',
-    purpose: 'Evaluar capacidad de adaptación y resiliencia'
+  questions.push({
+    category: 'Técnicas',
+    question: `¿Cómo te mantenés actualizado en ${skillLabel}? Mencioná algún curso, certificación o práctica reciente que hayas realizado.`,
+    purpose: 'Evaluar proactividad y compromiso con el desarrollo técnico continuo',
   });
 
-  const questions: InterviewQuestion[] = baseQuestions;
+  // ── 2. EXPERIENCIA (3 preguntas distintas) ───────────────────────────────
+  const expSummary = candidate.genericCV?.summary?.[0] || '';
+  questions.push({
+    category: 'Experiencia',
+    question: expSummary
+      ? `Según tu trayectoria: "${expSummary.substring(0, 150)}". ¿Podés ampliar ese punto y contarnos cómo impactó en los resultados de tu empleador?`
+      : `Contanos sobre tu experiencia más relevante para el puesto de ${vacancy.title} y cómo aportó valor a tu organización.`,
+    purpose: 'Evaluar experiencia práctica y capacidad de generar impacto',
+  });
+  questions.push({
+    category: 'Experiencia',
+    question: '¿Cuál considerás tu logro profesional más importante hasta la fecha? ¿Qué hiciste, cómo lo mediste y qué aprendiste de esa experiencia?',
+    purpose: 'Evaluar orientación a resultados y autoconciencia profesional',
+  });
+  questions.push({
+    category: 'Experiencia',
+    question: 'Describí una situación en la que tuviste que aprender algo completamente nuevo en poco tiempo para cumplir con una responsabilidad. ¿Cómo lo encaraste?',
+    purpose: 'Evaluar capacidad de aprendizaje ágil y gestión del tiempo',
+  });
+
+  // ── 3. EVALUACIÓN DEL PERFIL (3 preguntas distintas) ────────────────────
+  questions.push({
+    category: 'Evaluación del Perfil',
+    question: `Tu perfil recibió un puntaje de ${candidate.aiScore}/100 en nuestra evaluación. ¿Qué aspectos de tu experiencia y habilidades considerás que te hacen el candidato ideal para este puesto?`,
+    purpose: 'Validar autoconocimiento y alineación con el perfil requerido',
+  });
+  questions.push({
+    category: 'Evaluación del Perfil',
+    question: '¿En qué área o competencia creés que podés seguir creciendo para este rol? ¿Qué estás haciendo actualmente para desarrollarla?',
+    purpose: 'Evaluar humildad, autocrítica y disposición para el desarrollo continuo',
+  });
+  const concern = candidate.aiConcerns?.[0];
+  questions.push({
+    category: 'Evaluación del Perfil',
+    question: concern
+      ? `Durante la evaluación de tu CV se identificó el siguiente punto a profundizar: "${concern}". ¿Podés darnos más contexto al respecto?`
+      : `¿Hubo algún aspecto de tu experiencia que considerás no quedó suficientemente reflejado en tu CV y que sea relevante para este puesto?`,
+    purpose: 'Profundizar en áreas de mejora identificadas o información faltante',
+  });
+
+  // ── 4. FUNCIONES DEL PUESTO (3 preguntas distintas) ─────────────────────
+  const funcFragment = vacancy.mainFunctions?.substring(0, 180) || `las responsabilidades del puesto de ${vacancy.title}`;
+  questions.push({
+    category: 'Funciones del Puesto',
+    question: `Este rol implica: "${funcFragment}...". ¿Cómo tu trayectoria te prepara específicamente para asumir estas funciones desde el primer día?`,
+    purpose: 'Evaluar comprensión del rol y transferencia de experiencia',
+  });
+  questions.push({
+    category: 'Funciones del Puesto',
+    question: `¿Cuál de las responsabilidades de este puesto considerás que será tu mayor reto? ¿Cómo planearías afrontarlo?`,
+    purpose: 'Evaluar autoconsciencia, planificación y proactividad ante desafíos',
+  });
+  questions.push({
+    category: 'Funciones del Puesto',
+    question: `Si en tu primer mes detectás que un proceso dentro de tus funciones puede mejorarse, ¿cómo lo abordarías dentro de la organización?`,
+    purpose: 'Evaluar iniciativa, diplomacia y orientación a la mejora continua',
+  });
+
+  // ── 5. HABILIDADES BLANDAS (3 preguntas distintas) ──────────────────────
+  const area1 = vacancy.evaluationAreas?.[0]?.area || 'comunicación';
+  const area2 = vacancy.evaluationAreas?.[1]?.area || 'liderazgo';
+  questions.push({
+    category: 'Habilidades Blandas',
+    question: `Una de las competencias clave evaluadas es ${area1}. Danos un ejemplo concreto de cómo la demostraste en un entorno laboral real.`,
+    purpose: `Evaluar nivel de competencia en ${area1}`,
+  });
+  questions.push({
+    category: 'Habilidades Blandas',
+    question: `Contanos sobre ${area2} en tu experiencia. ¿Lideraste o coordinaste algún equipo o proyecto? ¿Qué resultado obtuviste?`,
+    purpose: `Evaluar nivel de competencia en ${area2}`,
+  });
+  questions.push({
+    category: 'Habilidades Blandas',
+    question: '¿Cómo manejás situaciones de conflicto con compañeros o superiores? Describí un caso real y cómo lo resolviste.',
+    purpose: 'Evaluar inteligencia emocional y manejo de conflictos interpersonales',
+  });
+
+  // ── 6. MOTIVACIÓN (3 preguntas distintas) ───────────────────────────────
+  questions.push({
+    category: 'Motivación',
+    question: `¿Qué te llevó a postularte específicamente para el puesto de ${vacancy.title} en ${vacancy.department || 'nuestra organización'}?`,
+    purpose: 'Evaluar motivación genuina e interés en el puesto',
+  });
+  questions.push({
+    category: 'Motivación',
+    question: '¿Dónde te ves profesionalmente en los próximos 3 a 5 años? ¿Cómo este puesto encaja en ese plan?',
+    purpose: 'Evaluar proyección profesional y alineación con la organización',
+  });
+  questions.push({
+    category: 'Motivación',
+    question: '¿Qué factores son más importantes para vos en un ambiente de trabajo? ¿Cómo los priorizás al momento de elegir dónde trabajar?',
+    purpose: 'Evaluar fit cultural y expectativas sobre el entorno laboral',
+  });
+
+  // ── 7. TRABAJO EN EQUIPO (3 preguntas distintas) ─────────────────────────
+  questions.push({
+    category: 'Trabajo en Equipo',
+    question: 'Contanos sobre un proyecto en equipo donde tuviste un rol clave. ¿Qué aportaste y cuál fue el resultado colectivo?',
+    purpose: 'Evaluar colaboración, sentido de equipo y contribución activa',
+  });
+  questions.push({
+    category: 'Trabajo en Equipo',
+    question: '¿Cómo actuás cuando un compañero de equipo no cumple con su parte del trabajo y eso afecta el resultado del grupo?',
+    purpose: 'Evaluar manejo de responsabilidad compartida y comunicación asertiva',
+  });
+  questions.push({
+    category: 'Trabajo en Equipo',
+    question: '¿Preferís trabajar de manera autónoma o en equipo? ¿Por qué? Danos un ejemplo de cada modalidad en tu trayectoria.',
+    purpose: 'Evaluar flexibilidad y autoconocimiento sobre estilos de trabajo',
+  });
+
+  // ── 8. ADAPTABILIDAD (3 preguntas distintas) ─────────────────────────────
+  questions.push({
+    category: 'Adaptabilidad',
+    question: 'Describí una situación en la que tuviste que adaptarte a un cambio inesperado en el trabajo. ¿Qué hiciste y qué resultado obtuviste?',
+    purpose: 'Evaluar resiliencia y capacidad de adaptación al cambio',
+  });
+  questions.push({
+    category: 'Adaptabilidad',
+    question: 'Contanos sobre una ocasión en que trabajaste bajo mucha presión o con plazos muy ajustados. ¿Cómo organizaste tu tiempo y qué priorizaste?',
+    purpose: 'Evaluar gestión del estrés y organización bajo presión',
+  });
+  questions.push({
+    category: 'Adaptabilidad',
+    question: '¿Podés contarnos sobre un fracaso o error profesional? ¿Qué aprendiste y cómo cambió tu forma de trabajar a partir de esa experiencia?',
+    purpose: 'Evaluar madurez, autocrítica y capacidad de aprendizaje desde el error',
+  });
   
   // Generar PDF
   const pdfUrl = await generateInterviewPDF(candidate, vacancy, questions);
