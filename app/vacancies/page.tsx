@@ -138,6 +138,28 @@ export default function PublicVacanciesPage() {
         </div>
       </section>
 
+      {/* Empresas del Grupo */}
+      <section className="py-10 bg-cap-black/70 border-b border-cap-gray/30">
+        <div className="container mx-auto px-4">
+          <p className="text-center text-xs font-black text-cap-gray uppercase tracking-widest mb-6">
+            Empresas del Grupo Automotriz
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-8">
+            {[
+              { src: '/didasa.png', alt: 'Didasa' },
+              { src: '/japan.png', alt: 'Japan' },
+              { src: '/mansiango.png', alt: 'Mansiango', scale: true },
+              { src: '/marlon.png', alt: 'Marlon' },
+              { src: '/sym.png', alt: 'SYM' },
+            ].map((logo) => (
+              <div key={logo.alt} className="flex items-center justify-center w-32 h-20 bg-white rounded-2xl shadow-md overflow-hidden p-3">
+                <img src={logo.src} alt={logo.alt} className={`object-contain ${logo.scale ? 'w-full h-full' : 'max-w-full max-h-full'}`} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Stats Section CAP */}
       <section className="container mx-auto px-4 -mt-10 relative z-10">
         <div className="flex flex-wrap justify-center gap-6 max-w-6xl mx-auto">
