@@ -161,7 +161,7 @@ export default function PublicVacanciesPage() {
       </section>
 
       {/* Stats Section CAP */}
-      <section className="container mx-auto px-4 -mt-10 relative z-10">
+      <section className="container mx-auto px-4 py-10 relative z-10">
         <div className="flex flex-wrap justify-center gap-6 max-w-6xl mx-auto">
           <Card className="w-full md:w-64 border-2 border-cap-red/30 bg-cap-gray-dark/80 backdrop-blur-sm shadow-racing-xl hover:scale-105 transition-transform">
             <CardContent className="pt-6 text-center">
